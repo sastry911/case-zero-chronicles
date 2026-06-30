@@ -1,0 +1,262 @@
+export type EvidenceTag = "physical" | "witness" | "document" | "digital";
+export type SuspicionLevel = "low" | "medium" | "high" | "prime";
+
+export interface TimelineEvent {
+  id: string;
+  time: string;
+  label: string;
+  detail: string;
+}
+
+export interface Evidence {
+  id: string;
+  label: string;
+  summary: string;
+  detail: string;
+  tag: EvidenceTag;
+  location: string;
+  collectedAt: string;
+  collectedBy: string;
+  chainOfCustody: string[];
+  relatedSuspectIds: string[];
+  notebookNote: string;
+}
+
+export interface Suspect {
+  id: string;
+  name: string;
+  initials: string;
+  occupation: string;
+  relationship: string;
+  alibi: string;
+  statement: string;
+  suspicion: SuspicionLevel;
+  motive: string;
+  timeline: TimelineEvent[];
+}
+
+export interface Case {
+  id: string;
+  number: string;
+  title: string;
+  blurb: string;
+  victim: {
+    name: string;
+    age: number;
+    occupation: string;
+    causeOfDeath: string;
+    timeOfDeath: string;
+  };
+  location: string;
+  date: string;
+  difficulty: 1 | 2 | 3 | 4 | 5;
+  estimatedMinutes: number;
+  briefing: string;
+  evidence: Evidence[];
+  suspects: Suspect[];
+}
+
+export const case001: Case = {
+  id: "case-001",
+  number: "Case #001",
+  title: "The Last Train",
+  blurb:
+    "A renowned architect is found dead in the rear car of the 23:47 express. Five passengers. One has something to hide.",
+  victim: {
+    name: "Emily Carter",
+    age: 38,
+    occupation: "Principal Architect, Carter & Vance Studio",
+    causeOfDeath: "Blunt-force trauma to the occipital region",
+    timeOfDeath: "Between 23:48 and 23:54",
+  },
+  location: "Hyderabad Metro Station — Northbound Express, Car 7",
+  date: "June 30, 2026",
+  difficulty: 4,
+  estimatedMinutes: 15,
+  briefing:
+    "At 00:12, transit police were called to the rear car of the 23:47 northbound express. Emily Carter, principal architect of a contested civic project, was found slumped against the rear vestibule door. Her phone was wiped, her satchel emptied of one folder, and a single torn ticket stub lay at her feet. Five passengers boarded that car. None left between 23:47 and 00:12. The killer is still on board.",
+  evidence: [
+    {
+      id: "ev-01",
+      label: "Torn ticket stub",
+      summary: "Carriage 7 · Seat 12B · Punched 23:51",
+      detail:
+        "Half of a paper ticket recovered beside the victim. The punch mark dates the entry into Car 7 at 23:51 — four minutes after departure. The torn edge matches no stub recovered from the four ticketed passengers, suggesting an additional, unticketed entrant.",
+      tag: "physical",
+      location: "Floor, rear vestibule, Car 7",
+      collectedAt: "00:18",
+      collectedBy: "Officer Reyna Kohli",
+      chainOfCustody: ["Officer Kohli (00:18)", "Forensics, Lab B (00:54)", "Evidence locker CZ-001 (01:32)"],
+      relatedSuspectIds: ["sus-02", "sus-04"],
+      notebookNote: "Punched at 23:51 — someone boarded Car 7 after departure.",
+    },
+    {
+      id: "ev-02",
+      label: "Conductor's testimony",
+      summary: "Two figures arguing near rear door at 23:51",
+      detail:
+        "Daniel Okafor, the night conductor, places two passengers in heated conversation near the rear vestibule of Car 7 at 23:51 — the same minute the rogue ticket was punched. He describes a tall man in a charcoal coat and a woman in a dark green scarf. Voss owns a dark green scarf; Hale wears charcoal.",
+      tag: "witness",
+      location: "Conductor's deposition, Hyderabad Metro HQ",
+      collectedAt: "01:05",
+      collectedBy: "Det. Alex Mercer",
+      chainOfCustody: ["Mercer (01:05)", "Case file CZ-001 (01:40)"],
+      relatedSuspectIds: ["sus-01", "sus-02", "sus-04"],
+      notebookNote: "Okafor saw two passengers arguing near the rear door at 23:51.",
+    },
+    {
+      id: "ev-03",
+      label: "Encrypted message",
+      summary: "Sent from victim's phone at 23:44 — recipient unknown",
+      detail:
+        "Three minutes before departure, Carter sent a Signal message reading: 'If I don't make it off this train, the folder is in Aune's hands.' The recipient's number is a burner, registered the same morning at a kiosk two stations south.",
+      tag: "digital",
+      location: "Cloud backup, Forensics Lab B",
+      collectedAt: "02:11",
+      collectedBy: "Digital Forensics, A. Mehta",
+      chainOfCustody: ["Mehta (02:11)", "Encrypted evidence vault (02:40)"],
+      relatedSuspectIds: ["sus-05"],
+      notebookNote: "Victim believed her life was at risk before boarding. Folder entrusted to Sister Aune.",
+    },
+    {
+      id: "ev-04",
+      label: "Annotated blueprint",
+      summary: "Civic-center plans, folded in victim's coat",
+      detail:
+        "A blueprint for the contested Banjara Hills civic center, annotated in red. The annotations flag structural shortcuts on floors 3–7 — the same floors signed off by Eleanor Voss six weeks ago. A signature panel has been torn away.",
+      tag: "document",
+      location: "Inside victim's coat pocket",
+      collectedAt: "00:31",
+      collectedBy: "Officer Reyna Kohli",
+      chainOfCustody: ["Kohli (00:31)", "Forensics, Lab B (01:02)", "Evidence locker CZ-001 (01:45)"],
+      relatedSuspectIds: ["sus-01", "sus-03"],
+      notebookNote: "Victim was documenting structural shortcuts approved by Voss.",
+    },
+    {
+      id: "ev-05",
+      label: "CCTV gap",
+      summary: "Car 7 camera dark from 23:49 to 23:55",
+      detail:
+        "Metro CCTV shows the Car 7 interior feed cut from 23:49:08 to 23:55:42. Logs indicate the breaker was tripped manually from the conductor's panel — accessible only with a staff key.",
+      tag: "digital",
+      location: "Metro Control, Server Room 2",
+      collectedAt: "03:20",
+      collectedBy: "Digital Forensics, A. Mehta",
+      chainOfCustody: ["Mehta (03:20)", "Encrypted evidence vault (03:55)"],
+      relatedSuspectIds: ["sus-04"],
+      notebookNote: "Camera cut required a staff key — narrows access to crew.",
+    },
+    {
+      id: "ev-06",
+      label: "Brass cufflink",
+      summary: "Engraved 'M.H.', found under seat 12A",
+      detail:
+        "A single brass cufflink engraved with the initials 'M.H.' Marcus Hale claims he lost the pair months ago, but the engraving style matches a bespoke set commissioned in May.",
+      tag: "physical",
+      location: "Under seat 12A, Car 7",
+      collectedAt: "00:42",
+      collectedBy: "Officer Reyna Kohli",
+      chainOfCustody: ["Kohli (00:42)", "Forensics, Lab B (01:12)", "Evidence locker CZ-001 (01:50)"],
+      relatedSuspectIds: ["sus-02"],
+      notebookNote: "Cufflink initials 'M.H.' place Hale at the scene despite his denial.",
+    },
+  ],
+  suspects: [
+    {
+      id: "sus-01",
+      name: "Eleanor Voss",
+      initials: "EV",
+      occupation: "Managing Partner, Voss & Carter Holdings",
+      relationship: "Business partner of 11 years",
+      alibi: "Claims she was in Car 4, reviewing contracts. No witness corroborates.",
+      statement:
+        "'Emily and I disagreed about the Banjara project, yes — but we disagreed about everything. That's how the firm worked. I would never have hurt her.'",
+      suspicion: "high",
+      motive: "Disputed civic contract worth ₹42 crore; Carter was preparing to expose her sign-offs.",
+      timeline: [
+        { id: "t1", time: "23:30", label: "Boarded at platform 3", detail: "Spotted by station agent buying a coffee." },
+        { id: "t2", time: "23:47", label: "Train departs", detail: "Voss seated in Car 4, per her statement." },
+        { id: "t3", time: "23:51", label: "Whereabouts unverified", detail: "No witness; conductor describes a woman in a green scarf in Car 7." },
+        { id: "t4", time: "00:12", label: "Found in Car 4", detail: "Reading a contract when transit police arrived." },
+      ],
+    },
+    {
+      id: "sus-02",
+      name: "Marcus Hale",
+      initials: "MH",
+      occupation: "Former apprentice, freelance draughtsman",
+      relationship: "Apprentice publicly dismissed by Carter two years ago",
+      alibi: "Says he was asleep in Car 6 the entire trip.",
+      statement:
+        "'She ruined my career in front of half the industry. I hated her, sure. But I've been clean for two years. I wouldn't throw that away.'",
+      suspicion: "prime",
+      motive: "Career destroyed by Carter's public dismissal; recent debts tied to forged credentials.",
+      timeline: [
+        { id: "t1", time: "23:39", label: "Boarded at platform 3", detail: "Carrying a single satchel, hood up." },
+        { id: "t2", time: "23:47", label: "Train departs", detail: "Seated alone in Car 6." },
+        { id: "t3", time: "23:51", label: "Seen near Car 7 vestibule", detail: "Matches conductor's 'tall man in charcoal coat' description." },
+        { id: "t4", time: "00:09", label: "Returned to Car 6", detail: "Observed by another passenger, breathing heavily." },
+      ],
+    },
+    {
+      id: "sus-03",
+      name: "Junko Reyes",
+      initials: "JR",
+      occupation: "Investigative journalist, The Deccan Ledger",
+      relationship: "Source-handler for Carter's whistle-blowing on the civic project",
+      alibi: "In Car 2, recording an interview. Audio file timestamps check out.",
+      statement:
+        "'Emily was about to break a story that would have ended Voss. I wanted her alive more than anyone on this train.'",
+      suspicion: "low",
+      motive: "None apparent — Carter was her source.",
+      timeline: [
+        { id: "t1", time: "23:42", label: "Boarded at platform 3", detail: "With recording equipment." },
+        { id: "t2", time: "23:47", label: "Train departs", detail: "Begins interview in Car 2." },
+        { id: "t3", time: "23:51", label: "Recording continues", detail: "Audio places her in Car 2 throughout." },
+        { id: "t4", time: "00:12", label: "Cooperating with police", detail: "Volunteered her recordings immediately." },
+      ],
+    },
+    {
+      id: "sus-04",
+      name: "Daniel Okafor",
+      initials: "DO",
+      occupation: "Night conductor, Hyderabad Metro",
+      relationship: "Stranger to the victim — but holds the only staff key",
+      alibi: "On duty, walking the train. No fixed location.",
+      statement:
+        "'I saw the two of them arguing near the rear door. I should have stopped. I didn't. That's all I know.'",
+      suspicion: "medium",
+      motive: "Recent gambling debts; rumours of taking unrecorded payments.",
+      timeline: [
+        { id: "t1", time: "23:47", label: "Train departs", detail: "Walking Car 5 toward the rear." },
+        { id: "t2", time: "23:49", label: "CCTV breaker tripped", detail: "Conductor's panel — staff key required." },
+        { id: "t3", time: "23:51", label: "Witnessed argument in Car 7", detail: "Describes a man and a woman near the rear door." },
+        { id: "t4", time: "00:08", label: "Reports body", detail: "Calls it in from the conductor's intercom." },
+      ],
+    },
+    {
+      id: "sus-05",
+      name: "Sister Aune",
+      initials: "SA",
+      occupation: "Train chaplain, Metro Welfare Trust",
+      relationship: "Carter's confidante; named in the encrypted message",
+      alibi: "In Car 1, with two other passengers in prayer.",
+      statement:
+        "'She gave me a folder, yes. She asked me to keep it safe. I did not open it. I never would.'",
+      suspicion: "low",
+      motive: "None established; Carter trusted her with the folder.",
+      timeline: [
+        { id: "t1", time: "23:35", label: "Met Carter at platform", detail: "Brief exchange — folder handed over." },
+        { id: "t2", time: "23:47", label: "Train departs", detail: "Begins prayer service in Car 1." },
+        { id: "t3", time: "23:51", label: "In Car 1", detail: "Witnessed by two passengers." },
+        { id: "t4", time: "00:15", label: "Surrenders folder", detail: "Hands sealed folder to transit police." },
+      ],
+    },
+  ],
+};
+
+export const allCases: Case[] = [case001];
+
+export function getCaseById(id: string): Case | undefined {
+  return allCases.find((c) => c.id === id);
+}
