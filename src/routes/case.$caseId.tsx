@@ -35,7 +35,7 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
-import { case001, getCaseById, type Evidence, type Suspect, type SuspicionLevel } from "@/data/case001";
+import { case001, getCaseById, type Case, type Evidence, type Suspect, type SuspicionLevel } from "@/data/case001";
 import { useInvestigation } from "@/lib/use-investigation";
 
 export const Route = createFileRoute("/case/$caseId")({
