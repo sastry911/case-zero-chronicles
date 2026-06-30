@@ -8,18 +8,25 @@ export interface TimelineEvent {
   detail: string;
 }
 
+export type Importance = "low" | "medium" | "high" | "critical";
+
 export interface Evidence {
   id: string;
   label: string;
   summary: string;
   detail: string;
   tag: EvidenceTag;
+  importance: Importance;
+  xp: number;
   location: string;
   collectedAt: string;
   collectedBy: string;
   chainOfCustody: string[];
   relatedSuspectIds: string[];
+  /** Adds points to each suspect's suspicion meter when this evidence is examined. */
+  suspicionImpact: Record<string, number>;
   notebookNote: string;
+  timelineUnlock?: TimelineEvent;
 }
 
 export interface Suspect {
@@ -30,9 +37,19 @@ export interface Suspect {
   relationship: string;
   alibi: string;
   statement: string;
-  suspicion: SuspicionLevel;
+  /** 0-100 baseline; meter is baseline + sum of suspicion impacts from examined evidence. */
+  baselineSuspicion: number;
   motive: string;
   timeline: TimelineEvent[];
+}
+
+export interface CrimeSceneHotspot {
+  id: string;
+  /** Percentage position over the crime scene image. */
+  x: number;
+  y: number;
+  label: string;
+  evidenceId: string;
 }
 
 export interface Case {
@@ -54,6 +71,8 @@ export interface Case {
   briefing: string;
   evidence: Evidence[];
   suspects: Suspect[];
+  hotspots: CrimeSceneHotspot[];
+  baseTimeline: TimelineEvent[];
 }
 
 export const case001: Case = {
