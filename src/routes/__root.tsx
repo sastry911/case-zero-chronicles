@@ -77,14 +77,18 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Lovable App" },
-      { name: "description", content: "Lovable Generated Project" },
+      { title: "Case Zero" },
+      { name: "description", content: "Solve a brand-new murder mystery every day. Investigate crime scenes, analyze evidence, question suspects, and prove your case. Can you catch today's killer?" },
       { name: "author", content: "Lovable" },
-      { property: "og:title", content: "Lovable App" },
-      { property: "og:description", content: "Lovable Generated Project" },
+      { property: "og:title", content: "Case Zero" },
+      { property: "og:description", content: "Solve a brand-new murder mystery every day. Investigate crime scenes, analyze evidence, question suspects, and prove your case. Can you catch today's killer?" },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
       { name: "twitter:site", content: "@Lovable" },
+      { name: "twitter:title", content: "Case Zero" },
+      { name: "twitter:description", content: "Solve a brand-new murder mystery every day. Investigate crime scenes, analyze evidence, question suspects, and prove your case. Can you catch today's killer?" },
+      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/771ecff8-b833-4f21-9f31-089485c30273/id-preview-a64b3fa6--cee3128d-faee-40ab-a12b-fbc80b889a17.lovable.app-1782827346081.png" },
+      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/771ecff8-b833-4f21-9f31-089485c30273/id-preview-a64b3fa6--cee3128d-faee-40ab-a12b-fbc80b889a17.lovable.app-1782827346081.png" },
     ],
     links: [
       {
