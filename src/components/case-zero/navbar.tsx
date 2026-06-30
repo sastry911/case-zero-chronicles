@@ -1,7 +1,8 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Fingerprint, LayoutDashboard, Trophy, UserRound, Menu, X } from "lucide-react";
+import { Fingerprint, LayoutDashboard, Trophy, UserRound, Menu, X, Volume2, VolumeX } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { ui, useUI } from "@/lib/ui-store";
 
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
@@ -12,6 +13,7 @@ const links = [
 export function Navbar() {
   const pathname = useRouterState({ select: (s) => s.location.pathname });
   const [open, setOpen] = useState(false);
+  const { soundOn } = useUI();
 
   return (
     <header className="sticky top-0 z-40 border-b border-border/60 bg-background/70 backdrop-blur-xl">
@@ -49,6 +51,15 @@ export function Navbar() {
         </nav>
 
         <div className="hidden md:flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => ui.toggleSound()}
+            aria-label={soundOn ? "Mute sound" : "Enable sound"}
+            aria-pressed={soundOn}
+            className="grid h-9 w-9 place-items-center rounded-md text-muted-foreground transition-colors hover:bg-surface hover:text-foreground"
+          >
+            {soundOn ? <Volume2 className="h-4 w-4" /> : <VolumeX className="h-4 w-4" />}
+          </button>
           <Link
             to="/login"
             className="text-sm font-medium text-muted-foreground hover:text-foreground transition-colors"
