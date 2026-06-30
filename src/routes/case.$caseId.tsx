@@ -48,7 +48,7 @@ export const Route = createFileRoute("/case/$caseId")({
       ],
     };
   },
-  loader: ({ params }) => {
+  loader: ({ params }): Case => {
     const c = getCaseById(params.caseId) ?? (params.caseId === "case-001" ? case001 : undefined);
     if (!c) throw notFound();
     return c;
