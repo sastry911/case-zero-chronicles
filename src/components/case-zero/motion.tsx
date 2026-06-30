@@ -1,20 +1,26 @@
 import { createElement, Fragment, type CSSProperties, type HTMLAttributes, type ReactNode } from "react";
 
 type MotionValue = string | number | Array<string | number>;
-type MotionTarget = Partial<CSSProperties> & {
+type MotionTarget = Omit<Partial<CSSProperties>, "boxShadow" | "opacity" | "scale" | "width"> & {
+  boxShadow?: MotionValue;
+  opacity?: MotionValue;
+  width?: MotionValue;
   x?: MotionValue;
   y?: MotionValue;
   scale?: MotionValue;
   rotateX?: MotionValue;
 };
 
-type MotionProps<T extends HTMLElement> = HTMLAttributes<T> & {
+type MotionStyle = CSSProperties & { transformPerspective?: string | number };
+
+type MotionProps<T extends HTMLElement> = Omit<HTMLAttributes<T>, "style"> & {
   initial?: MotionTarget | false;
   animate?: MotionTarget;
   exit?: MotionTarget;
   transition?: unknown;
   whileHover?: MotionTarget;
   layout?: boolean;
+  style?: MotionStyle;
 };
 
 function latest(value: MotionValue | undefined) {
@@ -25,15 +31,20 @@ function toPx(value: string | number | undefined) {
   return typeof value === "number" ? `${value}px` : value;
 }
 
-function buildMotionStyle(base: CSSProperties | undefined, animate: MotionTarget | undefined) {
+function buildMotionStyle(base: MotionStyle | undefined, animate: MotionTarget | undefined) {
   if (!animate) return base;
 
   const style: CSSProperties = { ...base };
+  if (base?.transformPerspective !== undefined) {
+    style.perspective = typeof base.transformPerspective === "number" ? `${base.transformPerspective}px` : base.transformPerspective;
+    delete (style as MotionStyle).transformPerspective;
+  }
   const transforms: string[] = [];
 
   if (animate.width !== undefined && !Array.isArray(animate.width)) style.width = animate.width;
   if (animate.opacity !== undefined && !Array.isArray(animate.opacity)) style.opacity = animate.opacity;
-  if (typeof animate.boxShadow === "string") style.boxShadow = animate.boxShadow;
+  const boxShadow = latest(animate.boxShadow);
+  if (typeof boxShadow === "string") style.boxShadow = boxShadow;
 
   const x = latest(animate.x);
   const y = latest(animate.y);
