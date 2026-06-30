@@ -1,5 +1,6 @@
 export type EvidenceTag = "physical" | "witness" | "document" | "digital";
 export type SuspicionLevel = "low" | "medium" | "high" | "prime";
+export type Importance = "low" | "medium" | "high" | "critical";
 
 export interface TimelineEvent {
   id: string;
@@ -14,12 +15,17 @@ export interface Evidence {
   summary: string;
   detail: string;
   tag: EvidenceTag;
+  importance: Importance;
+  xp: number;
   location: string;
   collectedAt: string;
   collectedBy: string;
   chainOfCustody: string[];
   relatedSuspectIds: string[];
+  /** Adds points to each suspect's suspicion meter when this evidence is examined. */
+  suspicionImpact: Record<string, number>;
   notebookNote: string;
+  timelineUnlock?: TimelineEvent;
 }
 
 export interface Suspect {
@@ -30,9 +36,19 @@ export interface Suspect {
   relationship: string;
   alibi: string;
   statement: string;
-  suspicion: SuspicionLevel;
+  /** 0-100 baseline; meter is baseline + sum of suspicion impacts from examined evidence. */
+  baselineSuspicion: number;
   motive: string;
   timeline: TimelineEvent[];
+}
+
+export interface CrimeSceneHotspot {
+  id: string;
+  /** Percentage position over the crime scene image. */
+  x: number;
+  y: number;
+  label: string;
+  evidenceId: string;
 }
 
 export interface Case {
@@ -54,6 +70,8 @@ export interface Case {
   briefing: string;
   evidence: Evidence[];
   suspects: Suspect[];
+  hotspots: CrimeSceneHotspot[];
+  baseTimeline: TimelineEvent[];
 }
 
 export const case001: Case = {
@@ -69,7 +87,7 @@ export const case001: Case = {
     causeOfDeath: "Blunt-force trauma to the occipital region",
     timeOfDeath: "Between 23:48 and 23:54",
   },
-  location: "Hyderabad Metro Station — Northbound Express, Car 7",
+  location: "Hyderabad Metro — Northbound Express, Car 7",
   date: "June 30, 2026",
   difficulty: 4,
   estimatedMinutes: 15,
@@ -81,14 +99,18 @@ export const case001: Case = {
       label: "Torn ticket stub",
       summary: "Carriage 7 · Seat 12B · Punched 23:51",
       detail:
-        "Half of a paper ticket recovered beside the victim. The punch mark dates the entry into Car 7 at 23:51 — four minutes after departure. The torn edge matches no stub recovered from the four ticketed passengers, suggesting an additional, unticketed entrant.",
+        "Half of a paper ticket recovered beside the victim. The punch mark dates the entry into Car 7 at 23:51 — four minutes after departure. The torn edge matches no stub from the four ticketed passengers, suggesting an additional, unticketed entrant.",
       tag: "physical",
+      importance: "high",
+      xp: 25,
       location: "Floor, rear vestibule, Car 7",
       collectedAt: "00:18",
       collectedBy: "Officer Reyna Kohli",
       chainOfCustody: ["Officer Kohli (00:18)", "Forensics, Lab B (00:54)", "Evidence locker CZ-001 (01:32)"],
       relatedSuspectIds: ["sus-02", "sus-04"],
+      suspicionImpact: { "sus-02": 12, "sus-04": 8 },
       notebookNote: "Punched at 23:51 — someone boarded Car 7 after departure.",
+      timelineUnlock: { id: "tu-01", time: "23:51", label: "Unticketed entry", detail: "An extra passenger boards Car 7 mid-route." },
     },
     {
       id: "ev-02",
@@ -97,26 +119,34 @@ export const case001: Case = {
       detail:
         "Daniel Okafor, the night conductor, places two passengers in heated conversation near the rear vestibule of Car 7 at 23:51 — the same minute the rogue ticket was punched. He describes a tall man in a charcoal coat and a woman in a dark green scarf. Voss owns a dark green scarf; Hale wears charcoal.",
       tag: "witness",
+      importance: "high",
+      xp: 25,
       location: "Conductor's deposition, Hyderabad Metro HQ",
       collectedAt: "01:05",
       collectedBy: "Det. Alex Mercer",
       chainOfCustody: ["Mercer (01:05)", "Case file CZ-001 (01:40)"],
       relatedSuspectIds: ["sus-01", "sus-02", "sus-04"],
+      suspicionImpact: { "sus-01": 8, "sus-02": 10, "sus-04": 4 },
       notebookNote: "Okafor saw two passengers arguing near the rear door at 23:51.",
+      timelineUnlock: { id: "tu-02", time: "23:51", label: "Argument observed", detail: "Conductor reports raised voices in Car 7." },
     },
     {
       id: "ev-03",
       label: "Encrypted message",
-      summary: "Sent from victim's phone at 23:44 — recipient unknown",
+      summary: "Sent from victim's phone at 23:44 — burner recipient",
       detail:
         "Three minutes before departure, Carter sent a Signal message reading: 'If I don't make it off this train, the folder is in Aune's hands.' The recipient's number is a burner, registered the same morning at a kiosk two stations south.",
       tag: "digital",
+      importance: "critical",
+      xp: 35,
       location: "Cloud backup, Forensics Lab B",
       collectedAt: "02:11",
       collectedBy: "Digital Forensics, A. Mehta",
       chainOfCustody: ["Mehta (02:11)", "Encrypted evidence vault (02:40)"],
       relatedSuspectIds: ["sus-05"],
+      suspicionImpact: { "sus-01": 4 },
       notebookNote: "Victim believed her life was at risk before boarding. Folder entrusted to Sister Aune.",
+      timelineUnlock: { id: "tu-03", time: "23:44", label: "Premonition message", detail: "Carter warns an unknown contact she may not survive the ride." },
     },
     {
       id: "ev-04",
@@ -125,12 +155,16 @@ export const case001: Case = {
       detail:
         "A blueprint for the contested Banjara Hills civic center, annotated in red. The annotations flag structural shortcuts on floors 3–7 — the same floors signed off by Eleanor Voss six weeks ago. A signature panel has been torn away.",
       tag: "document",
+      importance: "critical",
+      xp: 35,
       location: "Inside victim's coat pocket",
       collectedAt: "00:31",
       collectedBy: "Officer Reyna Kohli",
       chainOfCustody: ["Kohli (00:31)", "Forensics, Lab B (01:02)", "Evidence locker CZ-001 (01:45)"],
       relatedSuspectIds: ["sus-01", "sus-03"],
+      suspicionImpact: { "sus-01": 18, "sus-03": -4 },
       notebookNote: "Victim was documenting structural shortcuts approved by Voss.",
+      timelineUnlock: { id: "tu-04", time: "23:30", label: "Motive surfaces", detail: "Blueprint reveals Voss as Carter's target." },
     },
     {
       id: "ev-05",
@@ -139,12 +173,16 @@ export const case001: Case = {
       detail:
         "Metro CCTV shows the Car 7 interior feed cut from 23:49:08 to 23:55:42. Logs indicate the breaker was tripped manually from the conductor's panel — accessible only with a staff key.",
       tag: "digital",
+      importance: "medium",
+      xp: 20,
       location: "Metro Control, Server Room 2",
       collectedAt: "03:20",
       collectedBy: "Digital Forensics, A. Mehta",
       chainOfCustody: ["Mehta (03:20)", "Encrypted evidence vault (03:55)"],
       relatedSuspectIds: ["sus-04"],
+      suspicionImpact: { "sus-04": 16 },
       notebookNote: "Camera cut required a staff key — narrows access to crew.",
+      timelineUnlock: { id: "tu-05", time: "23:49", label: "Cameras blacked out", detail: "Someone with a staff key kills the Car 7 feed." },
     },
     {
       id: "ev-06",
@@ -153,12 +191,16 @@ export const case001: Case = {
       detail:
         "A single brass cufflink engraved with the initials 'M.H.' Marcus Hale claims he lost the pair months ago, but the engraving style matches a bespoke set commissioned in May.",
       tag: "physical",
+      importance: "critical",
+      xp: 35,
       location: "Under seat 12A, Car 7",
       collectedAt: "00:42",
       collectedBy: "Officer Reyna Kohli",
       chainOfCustody: ["Kohli (00:42)", "Forensics, Lab B (01:12)", "Evidence locker CZ-001 (01:50)"],
       relatedSuspectIds: ["sus-02"],
+      suspicionImpact: { "sus-02": 20 },
       notebookNote: "Cufflink initials 'M.H.' place Hale at the scene despite his denial.",
+      timelineUnlock: { id: "tu-06", time: "23:52", label: "Hale placed at scene", detail: "Cufflink ties Marcus Hale to seat 12A." },
     },
   ],
   suspects: [
@@ -171,7 +213,7 @@ export const case001: Case = {
       alibi: "Claims she was in Car 4, reviewing contracts. No witness corroborates.",
       statement:
         "'Emily and I disagreed about the Banjara project, yes — but we disagreed about everything. That's how the firm worked. I would never have hurt her.'",
-      suspicion: "high",
+      baselineSuspicion: 30,
       motive: "Disputed civic contract worth ₹42 crore; Carter was preparing to expose her sign-offs.",
       timeline: [
         { id: "t1", time: "23:30", label: "Boarded at platform 3", detail: "Spotted by station agent buying a coffee." },
@@ -189,7 +231,7 @@ export const case001: Case = {
       alibi: "Says he was asleep in Car 6 the entire trip.",
       statement:
         "'She ruined my career in front of half the industry. I hated her, sure. But I've been clean for two years. I wouldn't throw that away.'",
-      suspicion: "prime",
+      baselineSuspicion: 35,
       motive: "Career destroyed by Carter's public dismissal; recent debts tied to forged credentials.",
       timeline: [
         { id: "t1", time: "23:39", label: "Boarded at platform 3", detail: "Carrying a single satchel, hood up." },
@@ -207,7 +249,7 @@ export const case001: Case = {
       alibi: "In Car 2, recording an interview. Audio file timestamps check out.",
       statement:
         "'Emily was about to break a story that would have ended Voss. I wanted her alive more than anyone on this train.'",
-      suspicion: "low",
+      baselineSuspicion: 15,
       motive: "None apparent — Carter was her source.",
       timeline: [
         { id: "t1", time: "23:42", label: "Boarded at platform 3", detail: "With recording equipment." },
@@ -225,7 +267,7 @@ export const case001: Case = {
       alibi: "On duty, walking the train. No fixed location.",
       statement:
         "'I saw the two of them arguing near the rear door. I should have stopped. I didn't. That's all I know.'",
-      suspicion: "medium",
+      baselineSuspicion: 25,
       motive: "Recent gambling debts; rumours of taking unrecorded payments.",
       timeline: [
         { id: "t1", time: "23:47", label: "Train departs", detail: "Walking Car 5 toward the rear." },
@@ -243,7 +285,7 @@ export const case001: Case = {
       alibi: "In Car 1, with two other passengers in prayer.",
       statement:
         "'She gave me a folder, yes. She asked me to keep it safe. I did not open it. I never would.'",
-      suspicion: "low",
+      baselineSuspicion: 10,
       motive: "None established; Carter trusted her with the folder.",
       timeline: [
         { id: "t1", time: "23:35", label: "Met Carter at platform", detail: "Brief exchange — folder handed over." },
@@ -253,10 +295,30 @@ export const case001: Case = {
       ],
     },
   ],
+  hotspots: [
+    { id: "hs-01", x: 62, y: 84, label: "Torn paper on floor", evidenceId: "ev-01" },
+    { id: "hs-02", x: 38, y: 30, label: "Conductor's vestibule", evidenceId: "ev-02" },
+    { id: "hs-03", x: 18, y: 22, label: "Victim's phone glow", evidenceId: "ev-03" },
+    { id: "hs-04", x: 70, y: 78, label: "Folded blueprint", evidenceId: "ev-04" },
+    { id: "hs-05", x: 84, y: 14, label: "Dead CCTV camera", evidenceId: "ev-05" },
+    { id: "hs-06", x: 50, y: 68, label: "Glint under seat 12A", evidenceId: "ev-06" },
+  ],
+  baseTimeline: [
+    { id: "b1", time: "23:30", label: "Passengers gather", detail: "Five passengers board the 23:47 northbound at platform 3." },
+    { id: "b2", time: "23:47", label: "Train departs", detail: "Doors close. No further entries or exits until 00:12." },
+    { id: "b3", time: "00:12", label: "Body discovered", detail: "Conductor finds Emily Carter slumped against the rear vestibule." },
+  ],
 };
 
 export const allCases: Case[] = [case001];
 
 export function getCaseById(id: string): Case | undefined {
   return allCases.find((c) => c.id === id);
+}
+
+export function suspicionBand(score: number): SuspicionLevel {
+  if (score >= 80) return "prime";
+  if (score >= 55) return "high";
+  if (score >= 30) return "medium";
+  return "low";
 }
