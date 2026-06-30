@@ -88,7 +88,7 @@ const suspicionMeta: Record<SuspicionLevel, { tone: "muted" | "warning" | "dange
 };
 
 function CaseDetails() {
-  const c = Route.useLoaderData();
+  const c = Route.useLoaderData() as Case;
   const inv = useInvestigation(c.id, c.evidence.length, c.suspects.length);
 
   const [openEvidence, setOpenEvidence] = useState<Evidence | null>(null);
