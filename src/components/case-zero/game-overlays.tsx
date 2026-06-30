@@ -1,4 +1,4 @@
-import { motion, AnimatePresence } from "framer-motion";
+import { motion, AnimatePresence } from "@/components/case-zero/motion";
 import { Award, Sparkles } from "lucide-react";
 import { useUI } from "@/lib/ui-store";
 

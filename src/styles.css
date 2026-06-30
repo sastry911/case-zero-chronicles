@@ -124,3 +124,11 @@
 @utility bg-card-gradient {
   background: var(--gradient-card);
 }
+
+@utility perspective-desk {
+  perspective: 1000px;
+}
+
+@utility preserve-3d {
+  transform-style: preserve-3d;
+}
