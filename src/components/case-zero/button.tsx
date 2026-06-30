@@ -46,17 +46,17 @@ export function Button({
   );
 }
 
-type AnyLinkProps = React.ComponentProps<typeof Link>;
 export function LinkButton({
   variant = "primary",
   size = "md",
   className,
   children,
   ...props
-}: BaseProps & AnyLinkProps) {
+}: BaseProps & Record<string, any>) {
+  const LinkAny = Link as any;
   return (
-    <Link className={cn(base, variants[variant], sizes[size], className)} {...(props as AnyLinkProps)}>
+    <LinkAny className={cn(base, variants[variant], sizes[size], className)} {...props}>
       {children}
-    </Link>
+    </LinkAny>
   );
 }
