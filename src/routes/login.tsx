@@ -71,7 +71,7 @@ function LoginPage() {
               icon={Lock}
               type="password"
               placeholder="••••••••"
-              hint={mode === "signin" ? <a href="#" className="text-xs text-accent hover:underline">Forgot?</a> : undefined}
+              hint={mode === "signin" ? <button type="button" title="Coming soon" className="text-xs text-accent/70 hover:text-accent cursor-not-allowed" onClick={(e) => e.preventDefault()}>Forgot?</button> : undefined}
             />
 
             <Button className="w-full" size="lg">
