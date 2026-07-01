@@ -333,6 +333,7 @@ export const case001: Case = {
         { id: "t3", time: "23:51", label: "In Car 1", detail: "Witnessed by two passengers." },
         { id: "t4", time: "00:15", label: "Surrenders folder", detail: "Hands sealed folder to transit police." },
       ],
+      secret: "Aune opened the folder. She read enough to know Carter was right. She sealed it again before the police arrived.",
     },
   ],
   hotspots: [
