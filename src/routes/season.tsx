@@ -5,7 +5,6 @@ import {
   Eye,
   EyeOff,
   Fingerprint,
-  Ghost,
   Layers,
   Lock,
   Network,
@@ -13,7 +12,7 @@ import {
   Sparkles,
 } from "lucide-react";
 import { PageLayout } from "@/components/case-zero/page-layout";
-import { Badge, DifficultyStars } from "@/components/case-zero/badge";
+import { Badge } from "@/components/case-zero/badge";
 import { LinkButton } from "@/components/case-zero/button";
 import { cn } from "@/lib/utils";
 import { currentSeason, type ArchivedCase, type SharedClue } from "@/data/season";

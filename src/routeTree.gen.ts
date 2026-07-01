@@ -9,13 +9,20 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SeasonRouteImport } from './routes/season'
 import { Route as ProfileRouteImport } from './routes/profile'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as ArchiveRouteImport } from './routes/archive'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as CaseCaseIdRouteImport } from './routes/case.$caseId'
 
+const SeasonRoute = SeasonRouteImport.update({
+  id: '/season',
+  path: '/season',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
@@ -36,6 +43,11 @@ const DashboardRoute = DashboardRouteImport.update({
   path: '/dashboard',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ArchiveRoute = ArchiveRouteImport.update({
+  id: '/archive',
+  path: '/archive',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
@@ -49,67 +61,88 @@ const CaseCaseIdRoute = CaseCaseIdRouteImport.update({
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/archive': typeof ArchiveRoute
   '/dashboard': typeof DashboardRoute
   '/leaderboard': typeof LeaderboardRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/season': typeof SeasonRoute
   '/case/$caseId': typeof CaseCaseIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/archive': typeof ArchiveRoute
   '/dashboard': typeof DashboardRoute
   '/leaderboard': typeof LeaderboardRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/season': typeof SeasonRoute
   '/case/$caseId': typeof CaseCaseIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/archive': typeof ArchiveRoute
   '/dashboard': typeof DashboardRoute
   '/leaderboard': typeof LeaderboardRoute
   '/login': typeof LoginRoute
   '/profile': typeof ProfileRoute
+  '/season': typeof SeasonRoute
   '/case/$caseId': typeof CaseCaseIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
   fullPaths:
     | '/'
+    | '/archive'
     | '/dashboard'
     | '/leaderboard'
     | '/login'
     | '/profile'
+    | '/season'
     | '/case/$caseId'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
+    | '/archive'
     | '/dashboard'
     | '/leaderboard'
     | '/login'
     | '/profile'
+    | '/season'
     | '/case/$caseId'
   id:
     | '__root__'
     | '/'
+    | '/archive'
     | '/dashboard'
     | '/leaderboard'
     | '/login'
     | '/profile'
+    | '/season'
     | '/case/$caseId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ArchiveRoute: typeof ArchiveRoute
   DashboardRoute: typeof DashboardRoute
   LeaderboardRoute: typeof LeaderboardRoute
   LoginRoute: typeof LoginRoute
   ProfileRoute: typeof ProfileRoute
+  SeasonRoute: typeof SeasonRoute
   CaseCaseIdRoute: typeof CaseCaseIdRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/season': {
+      id: '/season'
+      path: '/season'
+      fullPath: '/season'
+      preLoaderRoute: typeof SeasonRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/profile': {
       id: '/profile'
       path: '/profile'
@@ -138,6 +171,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof DashboardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/archive': {
+      id: '/archive'
+      path: '/archive'
+      fullPath: '/archive'
+      preLoaderRoute: typeof ArchiveRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -157,10 +197,12 @@ declare module '@tanstack/react-router' {
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ArchiveRoute: ArchiveRoute,
   DashboardRoute: DashboardRoute,
   LeaderboardRoute: LeaderboardRoute,
   LoginRoute: LoginRoute,
   ProfileRoute: ProfileRoute,
+  SeasonRoute: SeasonRoute,
   CaseCaseIdRoute: CaseCaseIdRoute,
 }
 export const routeTree = rootRouteImport
