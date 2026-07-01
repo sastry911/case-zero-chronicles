@@ -66,15 +66,10 @@ export function Footer() {
                   Leaderboard
                 </Link>
               </li>
-              <li>
-                <Link to="/profile" className="text-foreground/80 hover:text-foreground">
-                  Profile
-                </Link>
-              </li>
             </ul>
           </div>
           <div>
-            <h4 className="mb-3 text-xs uppercase tracking-widest text-muted-foreground">Studio</h4>
+            <h4 className="mb-3 text-xs uppercase tracking-widest text-muted-foreground">Company</h4>
             <ul className="space-y-2">
               <li>
                 <button
@@ -90,12 +85,10 @@ export function Footer() {
                   Contact
                 </Link>
               </li>
-              <li>
-                <ComingSoonTextLink label="Press kit" />
-              </li>
             </ul>
           </div>
         </div>
+
 
         <div className="flex flex-col items-start gap-4 lg:items-end">
           <TooltipProvider delayDuration={150}>
