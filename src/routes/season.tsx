@@ -16,6 +16,7 @@ import { Badge } from "@/components/case-zero/badge";
 import { LinkButton } from "@/components/case-zero/button";
 import { cn } from "@/lib/utils";
 import { currentSeason, type ArchivedCase, type SharedClue } from "@/data/season";
+import { useLiveSeason } from "@/lib/story-engine";
 
 export const Route = createFileRoute("/season")({
   head: () => ({
@@ -30,7 +31,7 @@ export const Route = createFileRoute("/season")({
 });
 
 function SeasonBoard() {
-  const s = currentSeason;
+  const s = useLiveSeason();
   const progressPct = Math.round((s.currentDay / s.totalDays) * 100);
   const solved = s.cases.filter((c) => c.status === "solved").length;
   const active = s.cases.find((c) => c.status === "active");

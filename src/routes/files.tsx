@@ -5,6 +5,7 @@ import { Card } from "@/components/case-zero/card";
 import { LinkButton } from "@/components/case-zero/button";
 import { Badge, DifficultyStars } from "@/components/case-zero/badge";
 import { currentSeason, type ArchivedCase } from "@/data/season";
+import { useLiveSeason } from "@/lib/story-engine";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/files")({
@@ -26,7 +27,7 @@ const upcomingFiles = [
 ] as const;
 
 function FilesPage() {
-  const s = currentSeason;
+  const s = useLiveSeason();
   const archived = s.cases.filter((c) => c.status === "solved" || c.status === "failed");
   const activeCase = s.cases.find((c) => c.status === "active");
   const progressPct = Math.round((s.currentDay / s.totalDays) * 100);
