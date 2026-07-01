@@ -429,7 +429,7 @@ export function useInvestigation(c: Case) {
     addCustomNote: useCallback((n: string) => store.addCustomNote(n), [store]),
     toggleCompare: useCallback((id: string) => store.toggleCompare(id), [store]),
     clearCompare: useCallback(() => store.clearCompare(), [store]),
-    submitVerdict: useCallback((k: string, w: string, m: string) => store.submitVerdict(k, w, m), [store]),
+    submitVerdict: useCallback((k: string, w: string, m: string, p: string) => store.submitVerdict(k, w, m, p), [store]),
     resetInvestigation: useCallback(() => store.resetInvestigation(), [store]),
   };
 }
