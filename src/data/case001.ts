@@ -223,6 +223,8 @@ export const case001: Case = {
       suspicionImpact: { "sus-04": 16 },
       notebookNote: "Camera cut required a staff key — narrows access to crew.",
       timelineUnlock: { id: "tu-05", time: "23:49", label: "Cameras blacked out", detail: "Someone with a staff key kills the Car 7 feed." },
+      forensicReport: "Server logs confirm the breaker was tripped from Okafor's panel — but the timing (before the argument) is inconsistent with a planned killing. Points to a bribe, not premeditation by the conductor himself.",
+      redHerring: true,
     },
     {
       id: "ev-06",
