@@ -135,6 +135,10 @@ function deserialize(raw: string | null): InvestigationState | null {
 
 const stores = new Map<string, Store>();
 
+export function pairKey(a: string, b: string) {
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
+
 const ACHIEVEMENTS = [
   { id: "first_clue", label: "Sharp Eye", detail: "First clue uncovered", test: (s: InvestigationState) => s.examinedEvidence.size >= 1 },
   { id: "evidence_hunter", label: "Evidence Hunter", detail: "Collected 5 clues", test: (s: InvestigationState) => s.examinedEvidence.size >= 5 },
@@ -142,7 +146,10 @@ const ACHIEVEMENTS = [
   { id: "master_observer", label: "Master Observer", detail: "Examined every object", test: (s: InvestigationState, c: Case) => s.examinedEvidence.size >= c.evidence.length },
   { id: "intuition_unlocked", label: "Detective Intuition", detail: "Intuition fully charged", test: (s: InvestigationState) => s.intuition >= 100 },
   { id: "lab_rat", label: "Lab Rat", detail: "Read every forensic report", test: (s: InvestigationState, c: Case) => s.forensicsRead.size >= c.evidence.filter(e => e.forensicReport).length && c.evidence.some(e => e.forensicReport) },
+  { id: "first_thread", label: "Red Thread", detail: "Connected two pieces of evidence", test: (s: InvestigationState) => s.discoveredConnections.size >= 1 },
+  { id: "web_spinner", label: "Web Spinner", detail: "Discovered every logical connection", test: (s: InvestigationState, c: Case) => c.connections.length > 0 && s.discoveredConnections.size >= c.connections.length },
 ] as const;
+
 
 class Store {
   private state: InvestigationState;
