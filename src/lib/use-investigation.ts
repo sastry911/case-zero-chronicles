@@ -1,7 +1,19 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
-import type { Case, CaseObjective, Evidence } from "@/data/case001";
+import type { Case, CaseObjective, Evidence, EvidenceConnection } from "@/data/case001";
 import { suspicionBand, type SuspicionLevel } from "@/data/case001";
 import { ui } from "./ui-store";
+
+export type EvidenceState = "found" | "examined" | "analyzed" | "linked" | "proven";
+
+export interface DeskPlacement {
+  x: number; // percent 0-100 of desk width
+  y: number; // percent 0-100 of desk height
+  rotation: number; // degrees
+  flipped: boolean;
+}
+
+const DEFAULT_PLACEMENT: DeskPlacement = { x: 50, y: 50, rotation: 0, flipped: false };
+
 
 interface NotebookNote {
   id: string;
