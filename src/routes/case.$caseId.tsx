@@ -444,6 +444,7 @@ function SceneSideRail({
   xp,
   examinedCount,
   totalEvidence,
+  objectives,
   onJumpTab,
 }: {
   case: Case;
@@ -452,6 +453,7 @@ function SceneSideRail({
   xp: number;
   examinedCount: number;
   totalEvidence: number;
+  objectives: ReturnType<typeof useInvestigation>["objectives"];
   onJumpTab: (t: DockTab) => void;
 }) {
   return (
@@ -477,6 +479,19 @@ function SceneSideRail({
         <div className="mt-4 grid grid-cols-2 gap-3 text-center">
           <StatMini label="Evidence" value={`${examinedCount}/${totalEvidence}`} />
           <StatMini label="XP" value={<AnimatedNumber value={xp} />} accent />
+        </div>
+      </div>
+
+      {/* Objectives */}
+      <div className="rounded-2xl border border-border/70 bg-surface p-5">
+        <div className="flex items-center justify-between">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Objectives</p>
+          <span className="font-mono text-[10px] text-accent">
+            {objectives.filter(o => o.complete).length}/{objectives.length}
+          </span>
+        </div>
+        <div className="mt-3">
+          <ObjectivesList objectives={objectives} />
         </div>
       </div>
 
@@ -509,11 +524,32 @@ function SceneSideRail({
       >
         <div>
           <p className="font-mono text-[10px] uppercase tracking-widest text-primary">Ready?</p>
-          <p className="mt-0.5 text-sm font-semibold">Make Accusation</p>
+          <p className="mt-0.5 text-sm font-semibold">Reconstruct the Case</p>
         </div>
         <Gavel className="h-5 w-5 text-primary transition-transform group-hover:rotate-12" />
       </button>
     </aside>
+  );
+}
+
+function ObjectivesList({ objectives, compact }: { objectives: ReturnType<typeof useInvestigation>["objectives"]; compact?: boolean }) {
+  return (
+    <ul className={cn("space-y-2", compact && "space-y-1.5")}>
+      {objectives.map((o) => (
+        <li key={o.objective.id} className="flex items-center gap-2.5">
+          <span className={cn(
+            "grid h-4 w-4 shrink-0 place-items-center rounded-full border transition-colors",
+            o.complete ? "border-emerald-400/70 bg-emerald-400/20 text-emerald-200" : "border-border/70 bg-background/40 text-muted-foreground",
+          )}>
+            {o.complete ? <Eye className="h-2.5 w-2.5" /> : <span className="h-1 w-1 rounded-full bg-muted-foreground/60" />}
+          </span>
+          <span className={cn("min-w-0 flex-1 truncate text-xs", o.complete ? "text-foreground/70 line-through decoration-emerald-400/40" : "text-foreground/90")}>
+            {o.objective.label}
+          </span>
+          <span className="font-mono text-[10px] text-muted-foreground">{o.current}/{o.total}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
