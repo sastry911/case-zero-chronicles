@@ -405,7 +405,55 @@ export const case001: Case = {
     epilogue:
       "Marcus Hale killed Emily Carter for a career she took from him two years earlier. The bookend was a small cruelty — Carter had gifted it to the studio the year she promoted him, and then, a year later, fired him with it on the shelf behind her.",
   },
+  connections: [
+    {
+      id: "cn-ticket-argument",
+      a: "ev-01",
+      b: "ev-02",
+      label: "Same minute, same door",
+      insight:
+        "The rogue ticket was punched at 23:51 — the exact minute the conductor overheard voices near the rear vestibule. Someone slipped into Car 7 specifically to confront Carter.",
+      xp: 15,
+    },
+    {
+      id: "cn-ticket-cufflink",
+      a: "ev-01",
+      b: "ev-06",
+      label: "Unticketed passenger sat at 12A",
+      insight:
+        "The extra stub places an unticketed entrant in Car 7; the cufflink under seat 12A places Marcus Hale at that same seat despite his denial.",
+      xp: 20,
+    },
+    {
+      id: "cn-blackout-argument",
+      a: "ev-05",
+      b: "ev-02",
+      label: "Blackout window covers the confrontation",
+      insight:
+        "The Car 7 feed died at 23:49 and stayed dark until 23:55 — the six-minute window that swallowed the 23:51 argument. The killer moved inside the blind spot.",
+      xp: 15,
+    },
+    {
+      id: "cn-blueprint-bookend",
+      a: "ev-04",
+      b: "ev-06",
+      label: "Brass edge, torn signature",
+      insight:
+        "Forensics traced the blueprint's torn signature panel to a brass edge. The cufflink under 12A carries a UV blood trace — Hale used the brass bookend from Carter's own satchel.",
+      xp: 25,
+    },
+    {
+      id: "cn-message-blueprint",
+      a: "ev-03",
+      b: "ev-04",
+      label: "The folder was the blueprint",
+      insight:
+        "Carter's premonition message named Aune as the folder's guardian. The annotated blueprint — the very document she was preparing to expose Voss with — is what she trusted the chaplain to carry off the train.",
+      xp: 15,
+    },
+  ],
 };
+
 
 
 export const allCases: Case[] = [case001];
