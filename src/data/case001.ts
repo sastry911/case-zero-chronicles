@@ -147,6 +147,7 @@ export const case001: Case = {
       suspicionImpact: { "sus-02": 12, "sus-04": 8 },
       notebookNote: "Punched at 23:51 — someone boarded Car 7 after departure.",
       timelineUnlock: { id: "tu-01", time: "23:51", label: "Unticketed entry", detail: "An extra passenger boards Car 7 mid-route." },
+      forensicReport: "Lab B: paper stock matches metro-issue booklets. Ink residue on the punch dates the mark to within four minutes of the argument. No fingerprints — the entrant wore gloves.",
     },
     {
       id: "ev-02",
