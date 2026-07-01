@@ -243,6 +243,7 @@ export const case001: Case = {
       suspicionImpact: { "sus-02": 20 },
       notebookNote: "Cufflink initials 'M.H.' place Hale at the scene despite his denial.",
       timelineUnlock: { id: "tu-06", time: "23:52", label: "Hale placed at scene", detail: "Cufflink ties Marcus Hale to seat 12A." },
+      forensicReport: "Metallurgy: bespoke May commission by 'Suri & Co.' Records show the pair was collected by Hale in person on May 14. Under UV, faint blood trace matches the victim's type.",
     },
   ],
   suspects: [
