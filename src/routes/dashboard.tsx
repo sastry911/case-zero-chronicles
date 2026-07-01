@@ -1,323 +1,313 @@
-import { createFileRoute, Link } from "@tanstack/react-router";
+import { createFileRoute, useNavigate } from "@tanstack/react-router";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
-  BookOpen,
-  Calendar,
+  CloudRain,
   Clock,
-  Crosshair,
-  EyeOff,
+  FileWarning,
   Fingerprint,
-  Layers,
-  Lock,
+  Hash,
   MapPin,
-  Network,
+  Radio,
+  Shield,
   Skull,
   Sparkles,
-  Star,
+  Thermometer,
 } from "lucide-react";
 import { PageLayout } from "@/components/case-zero/page-layout";
-import { Card } from "@/components/case-zero/card";
-import { LinkButton } from "@/components/case-zero/button";
-import { Badge, DifficultyStars } from "@/components/case-zero/badge";
-import { currentSeason, type ArchivedCase, type SharedClue } from "@/data/season";
+import { currentSeason } from "@/data/season";
 import { todaysCase } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/dashboard")({
   head: () => ({
     meta: [
-      { title: "Dashboard — Case Zero" },
-      { name: "description", content: "Your file, tonight's case, and the threads connecting every crime this month." },
+      { title: "Morning Briefing — Case Zero" },
+      { name: "description", content: "Your incoming investigation, delivered." },
     ],
   }),
   component: Dashboard,
 });
 
-const VICTIM = "Emily Carter";
-const SCENE = "Hyderabad Metro Station";
-
-function greeting() {
-  const h = new Date().getHours();
-  if (h < 5) return "Working late";
-  if (h < 12) return "Good morning";
-  if (h < 17) return "Good afternoon";
-  if (h < 22) return "Good evening";
-  return "Burning the midnight oil";
-}
+const VICTIM = "Emily Carter, 34 — architect";
+const SCENE = "Platform 7, Hyderabad Metro";
+const CRIME_TIME = "23:47, last night";
+const DISPATCH_REF = "HYD-DIS-08812-A";
 
 function Dashboard() {
   const s = currentSeason;
-  const active = s.cases.find((c) => c.status === "active") ?? s.cases[0];
-  const progressPct = Math.round((s.currentDay / s.totalDays) * 100);
-  const solved = s.cases.filter((c) => c.status === "solved").length;
+  const navigate = useNavigate();
+  const [accepting, setAccepting] = useState(false);
+  const [mounted, setMounted] = useState(false);
+
+  useEffect(() => {
+    const t = setTimeout(() => setMounted(true), 20);
+    return () => clearTimeout(t);
+  }, []);
+
+  const onAccept = () => {
+    if (accepting) return;
+    setAccepting(true);
+    setTimeout(() => {
+      navigate({ to: "/case/$caseId", params: { caseId: todaysCase.id } });
+    }, 1400);
+  };
 
   return (
     <PageLayout>
-      <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8 animate-fade-in">
-        {/* ---------- 1. File header ---------- */}
-        <Card gradient className="relative overflow-hidden p-0">
-          <div className="absolute inset-0 bg-grid opacity-25 [mask-image:linear-gradient(180deg,black,transparent)]" />
-          <div className="absolute -left-20 -top-20 h-64 w-64 rounded-full bg-primary/25 blur-3xl" />
-          <div className="absolute -right-16 -bottom-16 h-56 w-56 rounded-full bg-accent/15 blur-3xl" />
-
-          <div className="relative grid gap-6 p-6 sm:p-8 lg:grid-cols-[1.4fr_1fr] lg:items-center">
-            <div className="min-w-0">
-              <p className="text-xs uppercase tracking-[0.25em] text-accent">{greeting()}, detective</p>
-              <div className="mt-3 flex flex-wrap items-center gap-2">
-                <span className="font-mono text-[10px] uppercase tracking-[0.35em] text-accent">{s.number}</span>
-                <Badge tone="primary"><Layers className="h-3 w-3" /> Seasonal file</Badge>
-                <Badge tone="muted">Day {s.currentDay} / {s.totalDays}</Badge>
-              </div>
-              <h1 className="mt-3 text-balance text-3xl font-semibold leading-[1.05] tracking-tight sm:text-5xl">
-                {s.title}
-              </h1>
-              <p className="mt-3 max-w-xl text-sm text-muted-foreground sm:text-base">
-                {s.tagline}
-              </p>
-
-              {/* File progress */}
-              <div className="mt-6 max-w-lg">
-                <div className="flex items-end justify-between text-xs text-muted-foreground">
-                  <span className="uppercase tracking-[0.22em]">File progress</span>
-                  <span className="font-mono">{s.currentDay} / {s.totalDays} nights</span>
-                </div>
-                <div className="mt-2 h-2 overflow-hidden rounded-full bg-surface ring-1 ring-border">
-                  <div
-                    className="h-full rounded-full bg-gradient-to-r from-primary via-primary to-accent shadow-glow transition-all duration-700"
-                    style={{ width: `${progressPct}%` }}
-                  />
-                </div>
-              </div>
-
-              <div className="mt-6 flex flex-wrap gap-3">
-                <Link
-                  to="/season"
-                  className="inline-flex items-center gap-2 rounded-md border border-border/70 bg-surface px-4 py-2 text-sm font-medium text-foreground transition-colors hover:border-accent/50"
-                >
-                  <Layers className="h-4 w-4" /> Open season board
-                </Link>
-                <Link
-                  to="/archive"
-                  className="inline-flex items-center gap-2 rounded-md px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground"
-                >
-                  <Fingerprint className="h-4 w-4" /> Shared evidence archive
-                </Link>
-              </div>
-            </div>
-
-            {/* Season board mini */}
-            <div className="relative min-w-0">
-              <div className="rounded-2xl border border-border/70 bg-background/60 p-5 backdrop-blur">
-                <div className="flex items-center justify-between">
-                  <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-accent">The wall</p>
-                  <span className="font-mono text-[10px] text-muted-foreground">{solved} archived</span>
-                </div>
-                <div className="mt-4 grid grid-cols-6 gap-1.5 sm:grid-cols-10 lg:grid-cols-6 xl:grid-cols-10">
-                  {s.cases.map((c) => (
-                    <MiniTile key={c.id} c={c} />
-                  ))}
-                </div>
-                <div className="mt-4 flex items-center gap-2 rounded-md border border-dashed border-accent/30 bg-accent/5 px-3 py-2 text-[11px] text-accent">
-                  <Sparkles className="h-3 w-3" /> Solve tonight's case to unlock day 2.
-                </div>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* ---------- 2. Tonight's case ---------- */}
-        <Card gradient className="relative mt-8 overflow-hidden p-0">
-          <div className="absolute inset-0 bg-grid opacity-25 [mask-image:linear-gradient(180deg,black,transparent)]" />
-          <div className="absolute -right-32 -top-32 h-80 w-80 rounded-full bg-primary/20 blur-3xl" />
-
-          <div className="relative grid gap-8 p-6 sm:p-10 lg:grid-cols-[1.4fr_1fr] lg:items-center">
-            <div className="min-w-0">
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge tone="primary"><Sparkles className="h-3 w-3" /> Tonight's case</Badge>
-                <span className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
-                  Day 01 · {todaysCase.number}
-                </span>
-              </div>
-
-              <h2 className="mt-5 text-balance text-3xl font-semibold leading-[1.05] tracking-tight sm:text-4xl">
-                The Last Train
-              </h2>
-              <p className="mt-3 max-w-xl text-sm text-muted-foreground">
-                {todaysCase.blurb}
-              </p>
-
-              <dl className="mt-6 grid max-w-2xl grid-cols-2 gap-x-6 gap-y-4 sm:grid-cols-4">
-                <MetaItem icon={Crosshair} label="Victim" value={VICTIM} />
-                <MetaItem icon={MapPin} label="Location" value={SCENE} />
-                <MetaItem icon={Star} label="Difficulty" value={<DifficultyStars value={4} />} />
-                <MetaItem icon={Clock} label="Est. time" value="15 min" />
-              </dl>
-
-              <div className="mt-8 flex flex-wrap items-center gap-3">
-                <LinkButton to="/case/$caseId" params={{ caseId: todaysCase.id }} size="lg">
-                  Start investigation <ArrowRight className="h-4 w-4" />
-                </LinkButton>
-                <LinkButton to="/case/$caseId" params={{ caseId: todaysCase.id }} variant="secondary" size="lg">
-                  <BookOpen className="h-4 w-4" /> Case brief
-                </LinkButton>
-              </div>
-            </div>
-
-            {/* Recurring clue teaser */}
-            <div className="rounded-2xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent p-6">
-              <div className="flex items-center gap-2">
-                <Fingerprint className="h-4 w-4 text-primary" />
-                <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Hidden thread</p>
-              </div>
-              <p className="mt-3 text-sm leading-relaxed text-foreground/90">
-                Somewhere in tonight's crime scene, a single recurring clue is waiting. It won't help you name the killer —
-                but it will bind this case to the next.
-              </p>
-              <div className="mt-4 flex items-center gap-2 rounded-md border border-border/60 bg-background/60 px-3 py-2">
-                <span className="grid h-6 w-6 place-items-center rounded-full border border-primary/40 bg-primary/10 font-mono text-[10px] font-bold text-primary">
-                  //
-                </span>
-                <span className="text-xs text-muted-foreground">
-                  Last thread found: <span className="text-foreground">A crimson silk fibre</span>
-                </span>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* ---------- 3. Season board summary ---------- */}
-        <div className="mt-12 grid gap-4 sm:grid-cols-2 lg:grid-cols-5">
-          <BoardStat icon={Calendar} label="Current day" value={`${s.currentDay} / ${s.totalDays}`} hint="Nights on the file" />
-          <BoardStat icon={Network} label="Hidden connections" value={s.hiddenConnections.toString()} hint="Case-to-case links" tone="accent" />
-          <BoardStat icon={Fingerprint} label="Unresolved evidence" value={s.unresolvedEvidence.toString()} hint="Clues without a home" tone="primary" />
-          <BoardStat icon={Layers} label="Archived cases" value={solved.toString()} hint="Sealed into the file" />
-          <BoardStat icon={Skull} label="Mastermind" value={s.masterminStatus} hint="No suspect identified" tone="primary" />
+      <div className="relative min-h-[calc(100vh-4rem)] overflow-hidden">
+        {/* Ambient background */}
+        <div className="pointer-events-none absolute inset-0">
+          <div className="absolute inset-0 bg-grid opacity-[0.18] [mask-image:radial-gradient(ellipse_at_top,black,transparent_70%)]" />
+          <div className="absolute -left-32 top-10 h-96 w-96 rounded-full bg-primary/15 blur-[120px]" />
+          <div className="absolute right-0 top-40 h-96 w-96 rounded-full bg-accent/10 blur-[120px]" />
+          <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-accent/40 to-transparent" />
         </div>
 
-        {/* ---------- 4. Shared evidence preview ---------- */}
-        <section className="mt-12">
-          <div className="mb-5 flex items-end justify-between">
-            <div>
-              <p className="text-xs uppercase tracking-[0.25em] text-accent">The through-line</p>
-              <h2 className="mt-1 text-2xl font-semibold tracking-tight">Shared evidence</h2>
-              <p className="mt-1 text-sm text-muted-foreground">Threads that recur across the file. Meaning unresolved.</p>
-            </div>
-            <Link to="/archive" className="text-sm text-muted-foreground hover:text-foreground">
-              Open archive →
-            </Link>
+        <div className={cn(
+          "relative mx-auto max-w-5xl px-4 pb-24 pt-14 transition-all duration-700 sm:px-6 lg:px-8",
+          mounted ? "opacity-100 translate-y-0" : "opacity-0 translate-y-4",
+        )}>
+          {/* Timestamp header */}
+          <div className="flex items-center gap-3 font-mono text-[11px] uppercase tracking-[0.32em] text-muted-foreground">
+            <span className="inline-flex h-1.5 w-1.5 animate-pulse rounded-full bg-primary" />
+            <span>08:00 AM · {new Date().toLocaleDateString(undefined, { weekday: "long", month: "long", day: "numeric" })}</span>
+            <span className="h-px flex-1 bg-border/60" />
+            <span className="text-accent">Priority · Homicide</span>
           </div>
 
-          <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
-            {s.sharedClues.map((clue) => (
-              <SharedClueCard key={clue.id} clue={clue} />
-            ))}
-            <div className="relative overflow-hidden rounded-2xl border border-dashed border-accent/30 bg-surface/40 p-6">
-              <div className="absolute -right-8 -top-8 h-32 w-32 rounded-full bg-accent/10 blur-2xl" />
-              <div className="relative">
-                <Sparkles className="h-5 w-5 text-accent" />
-                <p className="mt-3 text-sm font-semibold">A new thread will surface tonight.</p>
-                <p className="mt-1 text-xs text-muted-foreground">
-                  Every case in File 001 hides one recurring clue.
-                </p>
+          {/* Briefing title */}
+          <h1 className="mt-6 text-balance font-serif text-4xl font-light leading-[1] tracking-tight text-foreground sm:text-6xl">
+            Morning Briefing
+          </h1>
+          <p className="mt-3 max-w-xl text-sm leading-relaxed text-muted-foreground sm:text-base">
+            Coffee's on the desk. A file just landed on top of it. What's inside will occupy your day.
+          </p>
+
+          {/* File label */}
+          <div className="mt-10 flex flex-wrap items-baseline gap-x-5 gap-y-2 border-t border-border/50 pt-6">
+            <span className="font-mono text-[10px] uppercase tracking-[0.4em] text-accent">{s.number}</span>
+            <span className="text-lg font-semibold uppercase tracking-[0.2em] text-foreground sm:text-xl">
+              {s.title}
+            </span>
+            <span className="ml-auto font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">
+              Day {String(s.currentDay).padStart(2, "0")} of {s.totalDays}
+            </span>
+          </div>
+
+          {/* Incoming investigation */}
+          <section className="mt-8 overflow-hidden rounded-2xl border border-border/70 bg-surface/80 backdrop-blur">
+            {/* Header strip */}
+            <div className="flex items-center justify-between border-b border-border/60 bg-background/60 px-5 py-3">
+              <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-primary">
+                <Radio className="h-3 w-3 animate-pulse" />
+                Incoming Investigation
+              </div>
+              <div className="font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
+                Classified · Eyes only
               </div>
             </div>
-          </div>
-        </section>
+
+            {/* Case brief */}
+            <div className="grid gap-8 p-6 sm:p-8 md:grid-cols-[1.3fr_1fr]">
+              <div className="min-w-0">
+                <p className="font-mono text-[10px] uppercase tracking-[0.3em] text-muted-foreground">Case</p>
+                <h2 className="mt-2 text-balance text-3xl font-semibold leading-tight tracking-tight sm:text-4xl">
+                  The Last Train
+                </h2>
+                <p className="mt-3 max-w-lg text-sm leading-relaxed text-muted-foreground">
+                  {todaysCase.blurb}
+                </p>
+
+                <button
+                  onClick={onAccept}
+                  disabled={accepting}
+                  className={cn(
+                    "group mt-8 inline-flex items-center gap-3 rounded-md border border-primary/60 bg-gradient-to-b from-primary to-primary/80 px-7 py-3.5 text-sm font-semibold uppercase tracking-[0.24em] text-white shadow-glow transition-all",
+                    "hover:brightness-110 hover:shadow-[0_0_40px_-5px_rgb(198_40_40_/_0.6)]",
+                    "disabled:cursor-wait disabled:opacity-90",
+                  )}
+                >
+                  <Shield className="h-4 w-4" />
+                  {accepting ? "Opening file…" : "Accept Case"}
+                  <ArrowRight className="h-4 w-4 transition-transform group-hover:translate-x-1" />
+                </button>
+                <p className="mt-3 font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
+                  Signature required · Chain of custody begins on accept
+                </p>
+              </div>
+
+              <dl className="grid grid-cols-1 gap-y-5 border-l border-border/50 pl-6">
+                <BriefRow icon={MapPin} label="Location" value={SCENE} />
+                <BriefRow icon={Skull} label="Victim" value={VICTIM} />
+                <BriefRow icon={Clock} label="Time of incident" value={CRIME_TIME} />
+                <BriefRow icon={Shield} label="Lead detective" value="You" accent />
+                <BriefRow icon={Fingerprint} label="Est. investigation" value="~15 minutes" />
+              </dl>
+            </div>
+          </section>
+
+          {/* Ambient footer info */}
+          <section className="mt-6 grid gap-4 md:grid-cols-3">
+            <InfoCard icon={CloudRain} label="Weather at scene">
+              <p className="text-sm font-semibold text-foreground">Overcast · 24°C</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Light rain since 22:00. Platform CCTV partially obscured by condensation.
+              </p>
+              <p className="mt-2 inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                <Thermometer className="h-3 w-3" /> Feels like 22°
+              </p>
+            </InfoCard>
+
+            <InfoCard icon={Hash} label="Dispatch reference">
+              <p className="font-mono text-sm font-semibold tracking-wider text-accent">{DISPATCH_REF}</p>
+              <p className="mt-1 text-xs text-muted-foreground">
+                Logged by Sgt. R. Menon, 05:12 AM. Forwarded to your desk under Homicide, Bureau 4.
+              </p>
+              <p className="mt-2 font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
+                Status · Open
+              </p>
+            </InfoCard>
+
+            <InfoCard icon={FileWarning} label="Incident report">
+              <p className="text-xs leading-relaxed text-foreground/90">
+                A body has been discovered inside Platform 7 of Hyderabad Metro. The victim has been identified.
+                No suspect has been arrested. Lead detective assigned: <span className="font-semibold text-accent">You</span>.
+              </p>
+            </InfoCard>
+          </section>
+
+          {/* Subtle file context */}
+          <p className="mt-10 flex items-center justify-center gap-2 font-mono text-[10px] uppercase tracking-[0.32em] text-muted-foreground">
+            <Sparkles className="h-3 w-3 text-accent" />
+            One clue tonight will bind this case to the next
+          </p>
+        </div>
+
+        {/* Folder opening overlay */}
+        <FolderOpenOverlay active={accepting} />
       </div>
     </PageLayout>
   );
 }
 
-function MetaItem({
-  icon: Icon,
-  label,
-  value,
-}: {
-  icon: React.ComponentType<{ className?: string }>;
-  label: string;
-  value: React.ReactNode;
-}) {
-  return (
-    <div className="min-w-0">
-      <dt className="flex items-center gap-1.5 text-[10px] uppercase tracking-[0.22em] text-muted-foreground">
-        <Icon className="h-3 w-3" /> {label}
-      </dt>
-      <dd className="mt-1.5 truncate text-sm font-semibold text-foreground">{value}</dd>
-    </div>
-  );
-}
+/* ---------- Pieces ---------- */
 
-function BoardStat({
+function BriefRow({
   icon: Icon,
   label,
   value,
-  hint,
-  tone = "default",
+  accent,
 }: {
   icon: React.ComponentType<{ className?: string }>;
   label: string;
   value: string;
-  hint: string;
-  tone?: "default" | "accent" | "primary";
+  accent?: boolean;
 }) {
-  const iconTone =
-    tone === "primary"
-      ? "bg-primary/15 text-primary ring-primary/30"
-      : tone === "accent"
-        ? "bg-accent/15 text-accent ring-accent/30"
-        : "bg-surface text-foreground ring-border";
   return (
-    <div className="rounded-2xl border border-border/70 bg-surface p-5">
-      <div className="flex items-center gap-3">
-        <span className={cn("grid h-9 w-9 place-items-center rounded-lg ring-1", iconTone)}>
-          <Icon className="h-4 w-4" />
-        </span>
-        <p className="font-mono text-[10px] uppercase tracking-[0.22em] text-muted-foreground">{label}</p>
-      </div>
-      <p className="mt-3 text-2xl font-semibold tracking-tight">{value}</p>
-      <p className="mt-1 text-xs text-muted-foreground">{hint}</p>
+    <div className="min-w-0">
+      <dt className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+        <Icon className="h-3 w-3" /> {label}
+      </dt>
+      <dd className={cn("mt-1.5 text-sm font-semibold", accent ? "text-accent" : "text-foreground")}>
+        {value}
+      </dd>
     </div>
   );
 }
 
-function MiniTile({ c }: { c: ArchivedCase }) {
-  const isLocked = c.status === "locked";
-  const isActive = c.status === "active";
-  const isSolved = c.status === "solved";
+function InfoCard({
+  icon: Icon,
+  label,
+  children,
+}: {
+  icon: React.ComponentType<{ className?: string }>;
+  label: string;
+  children: React.ReactNode;
+}) {
   return (
-    <div
-      title={`Day ${c.day} · ${c.title}`}
-      className={cn(
-        "flex aspect-square items-center justify-center rounded border text-[9px] font-mono",
-        isActive && "border-primary/70 bg-primary/15 text-primary shadow-glow",
-        isSolved && "border-emerald-500/40 bg-emerald-500/10 text-emerald-300",
-        isLocked && "border-border/40 bg-surface/40 text-muted-foreground/60",
-      )}
-    >
-      {isLocked ? <Lock className="h-2.5 w-2.5" /> : String(c.day).padStart(2, "0")}
+    <div className="rounded-xl border border-border/60 bg-surface/60 p-5 backdrop-blur">
+      <div className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-[0.28em] text-muted-foreground">
+        <Icon className="h-3 w-3 text-accent" /> {label}
+      </div>
+      <div className="mt-3">{children}</div>
     </div>
   );
 }
 
-function SharedClueCard({ clue }: { clue: SharedClue }) {
+/* ---------- Folder-opening transition ---------- */
+
+function FolderOpenOverlay({ active }: { active: boolean }) {
+  if (!active) return null;
   return (
-    <div className="group relative overflow-hidden rounded-2xl border border-border/70 bg-surface p-5 transition-all hover:-translate-y-0.5 hover:border-accent/40">
-      <div className="absolute right-0 top-0 h-full w-1 bg-gradient-to-b from-primary via-primary/50 to-transparent opacity-70" />
-      <div className="flex items-start gap-4">
-        <div className="grid h-12 w-12 shrink-0 place-items-center rounded-xl border border-primary/40 bg-primary/10 font-mono text-sm font-bold text-primary">
-          {clue.symbol}
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-background/95 backdrop-blur-md animate-in fade-in duration-300">
+      {/* Ambient */}
+      <div className="pointer-events-none absolute inset-0">
+        <div className="absolute left-1/2 top-1/2 h-[70vmin] w-[70vmin] -translate-x-1/2 -translate-y-1/2 rounded-full bg-primary/20 blur-[120px]" />
+      </div>
+
+      {/* Folder */}
+      <div className="relative" style={{ perspective: "1400px" }}>
+        <div className="relative h-[380px] w-[300px] sm:h-[440px] sm:w-[360px]">
+          {/* Manila body */}
+          <div className="absolute inset-0 rounded-md border border-border/70 bg-gradient-to-br from-[#3a3226] via-[#2b2419] to-[#1c1811] shadow-2xl">
+            {/* Papers peeking */}
+            <div className="absolute inset-x-6 top-6 space-y-2 opacity-90">
+              <div className="h-2 w-3/4 rounded bg-foreground/70" />
+              <div className="h-2 w-1/2 rounded bg-foreground/40" />
+              <div className="mt-6 h-24 rounded bg-foreground/10 border border-foreground/10" />
+              <div className="mt-3 h-2 w-2/3 rounded bg-foreground/30" />
+              <div className="h-2 w-1/2 rounded bg-foreground/20" />
+            </div>
+            {/* Red diagonal stamp */}
+            <div className="absolute bottom-8 left-1/2 -translate-x-1/2 -rotate-6 border-2 border-primary px-3 py-1 font-mono text-[10px] font-bold uppercase tracking-[0.32em] text-primary">
+              Classified
+            </div>
+          </div>
+
+          {/* Cover flap — opens upward */}
+          <div
+            className="absolute inset-0 origin-top rounded-md border border-border/70 bg-gradient-to-br from-[#4a3f2e] via-[#382e21] to-[#26201700] shadow-2xl"
+            style={{
+              transform: "rotateX(-115deg)",
+              transformOrigin: "top center",
+              transition: "transform 900ms cubic-bezier(0.65, 0.05, 0.36, 1)",
+              backfaceVisibility: "hidden",
+              animation: "folderFlipOpen 900ms cubic-bezier(0.65, 0.05, 0.36, 1) forwards",
+            }}
+          >
+            <div className="flex h-full flex-col items-center justify-center gap-2 p-6 text-center">
+              <div className="font-mono text-[10px] uppercase tracking-[0.4em] text-accent">Case File</div>
+              <div className="font-serif text-2xl font-light tracking-wide text-foreground">The Last Train</div>
+              <div className="mt-2 h-px w-16 bg-primary/60" />
+              <div className="font-mono text-[9px] uppercase tracking-[0.32em] text-muted-foreground">
+                {DISPATCH_REF}
+              </div>
+            </div>
+          </div>
         </div>
-        <div className="min-w-0">
-          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
-            {clue.foundOnDay === 0 ? "Prologue" : `Surfaced day ${clue.foundOnDay}`} · {clue.appearances}× seen
+
+        {/* Label */}
+        <div className="mt-8 text-center">
+          <p className="font-mono text-[10px] uppercase tracking-[0.4em] text-primary animate-pulse">
+            Opening classified file…
           </p>
-          <p className="mt-1 text-sm font-semibold text-foreground">{clue.name}</p>
-          <p className="mt-2 text-xs leading-relaxed text-muted-foreground">{clue.hint}</p>
-          <p className="mt-3 inline-flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-accent">
-            <EyeOff className="h-3 w-3" /> Meaning unresolved
-          </p>
+          <div className="mx-auto mt-3 h-px w-40 overflow-hidden bg-border/50">
+            <div className="h-full w-full origin-left bg-gradient-to-r from-primary via-accent to-primary" style={{ animation: "briefingProgress 1.3s linear forwards" }} />
+          </div>
         </div>
       </div>
+
+      <style>{`
+        @keyframes folderFlipOpen {
+          0% { transform: rotateX(0deg); }
+          100% { transform: rotateX(-165deg); }
+        }
+        @keyframes briefingProgress {
+          from { transform: scaleX(0); }
+          to { transform: scaleX(1); }
+        }
+      `}</style>
     </div>
   );
 }
