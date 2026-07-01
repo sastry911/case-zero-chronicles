@@ -1130,14 +1130,45 @@ function AccusePanel({
         <h3 className="mt-4 text-xl font-semibold">{verdict.correct ? "Case closed." : "Wrong call, detective."}</h3>
         <p className="mt-2 text-sm text-muted-foreground">
           You accused <span className="font-semibold text-foreground">{verdict.name}</span>.{" "}
-          {verdict.correct ? "Justice served." : "The real killer is still on that train."}
+          {verdict.correct ? "Justice served — but the file is not." : "The real killer is still on that train."}
         </p>
-        <Button variant="secondary" className="mt-6" onClick={() => { setVerdict(null); setPick(null); }}>
-          Review evidence
-        </Button>
+
+        {/* Recurring clue reveal */}
+        <div className="mx-auto mt-8 max-w-md overflow-hidden rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/15 via-surface to-background p-5 text-left shadow-glow">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Something else was here</p>
+          </div>
+          <div className="mt-4 flex items-start gap-3">
+            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-primary/40 bg-primary/10 font-mono text-sm font-bold text-primary">
+              //
+            </span>
+            <div className="min-w-0">
+              <p className="text-sm font-semibold">A single crimson silk thread</p>
+              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+                Snagged on the vestibule hinge. It doesn't match Carter's coat, or anything the five passengers were wearing.
+                It shouldn't be here.
+              </p>
+              <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-accent">Meaning unresolved · Filed to archive</p>
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-6 flex items-center justify-center gap-3">
+          <Button variant="secondary" onClick={() => { setVerdict(null); setPick(null); }}>
+            Review evidence
+          </Button>
+          <a
+            href="/archive"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:brightness-110"
+          >
+            Open the archive →
+          </a>
+        </div>
       </div>
     );
   }
+
 
   return (
     <div className="mx-auto max-w-4xl">

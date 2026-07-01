@@ -1,9 +1,10 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { ArrowRight, Search, Network, Gavel, Sparkles, Clock, Trophy } from "lucide-react";
+import { ArrowRight, Search, Network, Gavel, Sparkles, Clock, Layers } from "lucide-react";
 import { PageLayout } from "@/components/case-zero/page-layout";
 import { Card, CardTitle, CardDescription } from "@/components/case-zero/card";
 import { LinkButton } from "@/components/case-zero/button";
 import { Badge } from "@/components/case-zero/badge";
+import { currentSeason } from "@/data/season";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -44,32 +45,31 @@ function Landing() {
         <div className="relative mx-auto max-w-7xl px-4 pb-24 pt-20 sm:px-6 sm:pt-28 lg:px-8 lg:pb-32">
           <div className="mx-auto max-w-3xl text-center">
             <Badge tone="accent" className="mb-6">
-              <Sparkles className="h-3 w-3" /> New case in 14h 22m
+              <Sparkles className="h-3 w-3" /> {currentSeason.number} · Day {currentSeason.currentDay} of {currentSeason.totalDays}
             </Badge>
             <h1 className="text-balance font-display text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
               <span className="block text-foreground">CASE ZERO</span>
               <span className="mt-4 block text-2xl font-light text-muted-foreground sm:text-3xl lg:text-4xl">
-                Every day. <span className="text-foreground">One murder.</span> <span className="text-primary">One chance to solve it.</span>
+                Every night. <span className="text-foreground">One murder.</span> <span className="text-primary">One thread pulling them all together.</span>
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-xl text-balance text-base text-muted-foreground sm:text-lg">
-              Become the detective. Investigate evidence, question suspects, and solve a brand-new
-              mystery every day.
+              You're not solving one case — you're building a file. Thirty nights. Thirty crimes. One hand behind all of them.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
               <LinkButton to="/dashboard" size="lg">
                 Start investigation <ArrowRight className="h-4 w-4" />
               </LinkButton>
-              <LinkButton to="/leaderboard" variant="secondary" size="lg">
-                <Trophy className="h-4 w-4" /> Leaderboard
+              <LinkButton to="/season" variant="secondary" size="lg">
+                <Layers className="h-4 w-4" /> View the file
               </LinkButton>
             </div>
 
             <div className="mx-auto mt-14 grid max-w-2xl grid-cols-3 gap-4 text-center">
               {[
-                { value: "184", label: "Cases shipped" },
-                { value: "92k", label: "Detectives" },
-                { value: "12m", label: "Avg. solve time" },
+                { value: `${currentSeason.currentDay}/${currentSeason.totalDays}`, label: "Nights on file" },
+                { value: currentSeason.sharedClues.length.toString(), label: "Threads collected" },
+                { value: currentSeason.masterminStatus, label: "Mastermind" },
               ].map((s) => (
                 <div key={s.label} className="rounded-lg border border-border/60 bg-surface/50 px-3 py-4 backdrop-blur">
                   <div className="font-mono text-2xl font-semibold text-accent">{s.value}</div>
