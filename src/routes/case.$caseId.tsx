@@ -1,13 +1,9 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useMemo, useState, type CSSProperties } from "react";
+import { useMemo, useState } from "react";
 import { motion, AnimatePresence } from "@/components/case-zero/motion";
 import {
-  AlertTriangle,
   ArrowLeft,
   BookOpen,
-  Calendar,
-  CheckCircle2,
-  Clock,
   Cpu,
   Eye,
   FileSearch,
@@ -16,8 +12,8 @@ import {
   Fingerprint,
   Flame,
   Gavel,
-  GitCompare,
   Lightbulb,
+  Lock,
   MapPin,
   MessageSquare,
   NotebookPen,
@@ -25,27 +21,22 @@ import {
   PinOff,
   Plus,
   ScanSearch,
-  ShieldAlert,
   Sparkles,
-  Star,
   Trash2,
-  UserCircle2,
   Users,
   X,
 } from "lucide-react";
 import { PageLayout } from "@/components/case-zero/page-layout";
-import { Card } from "@/components/case-zero/card";
 import { Button } from "@/components/case-zero/button";
 import { Badge, DifficultyStars } from "@/components/case-zero/badge";
 import { AnimatedNumber } from "@/components/case-zero/animated-number";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription } from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle } from "@/components/ui/sheet";
 import {
   case001,
   getCaseById,
@@ -56,6 +47,7 @@ import {
   type SuspicionLevel,
 } from "@/data/case001";
 import { useInvestigation } from "@/lib/use-investigation";
+import { cn } from "@/lib/utils";
 import crimeSceneImg from "@/assets/crime-scene-train.jpg";
 
 export const Route = createFileRoute("/case/$caseId")({
@@ -100,1093 +92,1127 @@ const evidenceIcon = {
   document: FileWarning,
 } as const;
 
-const importanceTone: Record<Importance, { tone: "muted" | "accent" | "warning" | "danger"; label: string }> = {
-  low: { tone: "muted", label: "Low" },
-  medium: { tone: "accent", label: "Medium" },
-  high: { tone: "warning", label: "High" },
-  critical: { tone: "danger", label: "Critical" },
+const importanceTone: Record<Importance, "muted" | "accent" | "warning" | "danger"> = {
+  low: "muted",
+  medium: "accent",
+  high: "warning",
+  critical: "danger",
 };
 
-const suspicionMeta: Record<SuspicionLevel, { tone: "muted" | "warning" | "danger" | "primary"; label: string; bar: string; ring: string }> = {
-  low: { tone: "muted", label: "Low", bar: "bg-emerald-500/70", ring: "ring-emerald-500/30" },
-  medium: { tone: "warning", label: "Medium", bar: "bg-amber-400/80", ring: "ring-amber-400/30" },
-  high: { tone: "danger", label: "High", bar: "bg-red-500/80", ring: "ring-red-500/40" },
-  prime: { tone: "primary", label: "Prime", bar: "bg-primary", ring: "ring-primary/50" },
+const suspicionMeta: Record<SuspicionLevel, { label: string; bar: string; tone: "muted" | "warning" | "danger" | "primary" }> = {
+  low: { label: "Low", bar: "bg-emerald-500/70", tone: "muted" },
+  medium: { label: "Medium", bar: "bg-amber-400/80", tone: "warning" },
+  high: { label: "High", bar: "bg-red-500/80", tone: "danger" },
+  prime: { label: "Prime", bar: "bg-primary", tone: "primary" },
 };
+
+type DockTab = "evidence" | "suspects" | "timeline" | "notebook" | "forensics" | "accuse";
+
+const DOCK_TABS: { id: DockTab; label: string; icon: typeof Eye }[] = [
+  { id: "evidence", label: "Evidence", icon: Fingerprint },
+  { id: "suspects", label: "Suspects", icon: Users },
+  { id: "timeline", label: "Timeline", icon: ScanSearch },
+  { id: "notebook", label: "Notebook", icon: NotebookPen },
+  { id: "forensics", label: "Forensics", icon: FileText },
+  { id: "accuse", label: "Accuse", icon: Gavel },
+];
+
+const SUSPICION_REVEAL_THRESHOLD = 3;
 
 function InvestigationDesk() {
   const c = Route.useLoaderData() as Case;
   const inv = useInvestigation(c);
+  const [openTab, setOpenTab] = useState<DockTab | null>(null);
+  const [activeEvidence, setActiveEvidence] = useState<Evidence | null>(null);
+  const [activeSuspect, setActiveSuspect] = useState<Suspect | null>(null);
+  const [hoverHotspot, setHoverHotspot] = useState<string | null>(null);
+  const [briefOpen, setBriefOpen] = useState(false);
 
-  const [openEvidence, setOpenEvidence] = useState<Evidence | null>(null);
-  const [openSuspect, setOpenSuspect] = useState<Suspect | null>(null);
-  const [accusing, setAccusing] = useState<Suspect | null>(null);
-  const [accused, setAccused] = useState<string | null>(null);
-  const [noteDraft, setNoteDraft] = useState("");
-  const [activeReveal, setActiveReveal] = useState<string | null>(null);
-
-  const handleExamineFromCard = (e: Evidence, ev?: React.MouseEvent) => {
-    const x = ev ? ev.clientX : undefined;
-    const y = ev ? ev.clientY : undefined;
-    setOpenEvidence(e);
-    inv.examineEvidence(e, x, y);
-  };
-
-  const handleHotspot = (hotspotId: string, evidenceId: string, ev: React.MouseEvent) => {
-    setActiveReveal(hotspotId);
-    setTimeout(() => setActiveReveal(null), 900);
-    inv.investigateHotspot(hotspotId, ev.clientX, ev.clientY);
-    const evObj = c.evidence.find((x) => x.id === evidenceId);
-    if (evObj) setTimeout(() => setOpenEvidence(evObj), 380);
-  };
-
-  const handleInterview = (s: Suspect) => {
-    setOpenSuspect(s);
-    inv.interviewSuspect(s.id);
-  };
-
-  const sortedSuspects = useMemo(
-    () => [...c.suspects].sort((a, b) => inv.suspicionScores[b.id].score - inv.suspicionScores[a.id].score),
-    [c.suspects, inv.suspicionScores],
+  const examinedEvidence = useMemo(
+    () => c.evidence.filter((e) => inv.examined.has(e.id)),
+    [c.evidence, inv.examined],
   );
-
-  const pinnedNotes = inv.notebook.filter((n) => n.pinned);
-  const otherNotes = inv.notebook.filter((n) => !n.pinned);
-  const compareEvidence = inv.compareSet
-    .map((id) => c.evidence.find((e) => e.id === id))
-    .filter(Boolean) as Evidence[];
+  const suspicionRevealed = inv.examined.size >= SUSPICION_REVEAL_THRESHOLD;
 
   return (
-    <PageLayout>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        transition={{ duration: 0.4 }}
-        className="mx-auto max-w-[1600px] px-4 py-8 sm:px-6 lg:px-8"
-      >
-        <div className="flex items-center justify-between gap-3">
-          <Link to="/dashboard" className="inline-flex items-center gap-1.5 text-sm text-muted-foreground hover:text-foreground">
-            <ArrowLeft className="h-4 w-4" /> Back to dashboard
+    <PageLayout withFooter={false}>
+      {/* Top command strip */}
+      <div className="sticky top-16 z-30 border-b border-border/60 bg-background/85 backdrop-blur">
+        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-4 px-4 py-3 md:px-6">
+          <Link
+            to="/dashboard"
+            className="inline-flex items-center gap-1.5 text-xs font-medium text-muted-foreground transition-colors hover:text-foreground"
+          >
+            <ArrowLeft className="h-3.5 w-3.5" /> Dashboard
           </Link>
-          <div className="flex items-center gap-2">
-            <Badge tone={accused ? "success" : "primary"}>{accused ? "Case closed" : "Live investigation"}</Badge>
-            <span className="font-mono text-[10px] uppercase tracking-[0.25em] text-muted-foreground">{c.number}</span>
+          <span className="text-border">•</span>
+          <div className="min-w-0 flex-1">
+            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-accent">{c.number}</p>
+            <h1 className="truncate text-base font-semibold leading-tight md:text-lg">{c.title}</h1>
           </div>
+          <div className="hidden items-center gap-4 text-xs text-muted-foreground md:flex">
+            <span className="inline-flex items-center gap-1.5"><MapPin className="h-3.5 w-3.5 text-accent" />{c.location.split("—")[0].trim()}</span>
+            <DifficultyStars value={c.difficulty} />
+          </div>
+          <button
+            onClick={() => setBriefOpen(true)}
+            className="inline-flex items-center gap-1.5 rounded-md border border-border/70 bg-surface px-3 py-1.5 text-xs font-medium text-muted-foreground transition-colors hover:border-accent/40 hover:text-foreground"
+          >
+            <BookOpen className="h-3.5 w-3.5" /> Case Brief
+          </button>
+          <ProgressPill progress={inv.progress} xp={inv.xp} intuition={inv.intuition} />
         </div>
+      </div>
 
-        <div className="mt-5 grid gap-5 xl:grid-cols-[300px_minmax(0,1fr)_340px]">
-          {/* ===================== LEFT ===================== */}
-          <div className="flex flex-col gap-5">
-            <CaseOverviewPanel c={c} />
-            <ProgressPanel c={c} inv={inv} />
-            <IntuitionPanel intuition={inv.intuition} xp={inv.xp} />
-          </div>
-
-          {/* ===================== CENTER ===================== */}
-          <div className="flex flex-col gap-5">
-            <CrimeScenePanel
-              c={c}
-              investigated={inv.investigated}
-              examined={inv.examined}
-              onHotspot={handleHotspot}
-              activeReveal={activeReveal}
-            />
-
-            <EvidenceLockerPanel
-              c={c}
-              inv={inv}
-              onOpen={handleExamineFromCard}
-            />
-
-            <ActiveCluesPanel
-              c={c}
-              compareEvidence={compareEvidence}
-              onClear={inv.clearCompare}
-            />
-          </div>
-
-          {/* ===================== RIGHT ===================== */}
-          <div className="flex flex-col gap-5">
-            <SuspectsPanel
-              suspects={sortedSuspects}
-              scores={inv.suspicionScores}
-              interviewed={inv.interviewed}
-              onPick={handleInterview}
-            />
-            <TimelinePanel timeline={inv.timeline} totalUnlockable={c.evidence.filter((e) => e.timelineUnlock).length} examined={inv.examined} />
-            <NotebookPanel
-              c={c}
-              pinned={pinnedNotes}
-              others={otherNotes}
-              noteDraft={noteDraft}
-              setNoteDraft={setNoteDraft}
-              onAdd={() => {
-                inv.addCustomNote(noteDraft);
-                setNoteDraft("");
-              }}
-              onTogglePin={inv.togglePin}
-              onRemove={inv.removeNote}
-              onUpdate={inv.updateNote}
-            />
-            <AccusationPanel
-              c={c}
-              accused={accused}
-              onAccuse={(s) => setAccusing(s)}
-              scores={inv.suspicionScores}
-            />
-          </div>
+      {/* HERO: Crime Scene */}
+      <div className="mx-auto max-w-[1600px] px-4 pb-40 pt-6 md:px-6">
+        <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_320px]">
+          <CrimeScene
+            image={crimeSceneImg}
+            hotspots={c.hotspots}
+            investigated={inv.investigated}
+            hoverId={hoverHotspot}
+            onHover={setHoverHotspot}
+            onSelect={(hs, x, y) => {
+              inv.investigateHotspot(hs.id, x, y);
+              const ev = c.evidence.find((e) => e.id === hs.evidenceId);
+              if (ev) setActiveEvidence(ev);
+            }}
+          />
+          <SceneSideRail
+            case={c}
+            progress={inv.progress}
+            intuition={inv.intuition}
+            xp={inv.xp}
+            examinedCount={inv.examined.size}
+            totalEvidence={c.evidence.length}
+            onJumpTab={setOpenTab}
+          />
         </div>
-      </motion.div>
+      </div>
 
-      {/* ============= Evidence Modal ============= */}
+      {/* Bottom Dock */}
+      <BottomDock
+        openTab={openTab}
+        onOpen={setOpenTab}
+        counts={{
+          evidence: inv.examined.size,
+          suspects: c.suspects.length,
+          timeline: inv.timeline.length,
+          notebook: inv.notebook.length,
+          forensics: examinedEvidence.length,
+        }}
+      />
+
+      {/* Focus-mode sheets */}
+      <FocusSheet open={openTab === "evidence"} title="Evidence Locker" subtitle={`${inv.examined.size} of ${c.evidence.length} collected`} onClose={() => setOpenTab(null)}>
+        <EvidencePanel
+          all={c.evidence}
+          examinedIds={inv.examined}
+          importantIds={inv.important}
+          onOpen={(e) => setActiveEvidence(e)}
+        />
+      </FocusSheet>
+
+      <FocusSheet open={openTab === "suspects"} title="Suspects" subtitle={suspicionRevealed ? "Suspicion updates as evidence is examined" : `Examine ${SUSPICION_REVEAL_THRESHOLD - inv.examined.size} more clue(s) to reveal suspicion`} onClose={() => setOpenTab(null)}>
+        <SuspectsPanel
+          suspects={c.suspects}
+          scores={inv.suspicionScores}
+          interviewed={inv.interviewed}
+          revealed={suspicionRevealed}
+          onSelect={(s) => setActiveSuspect(s)}
+        />
+      </FocusSheet>
+
+      <FocusSheet open={openTab === "timeline"} title="Timeline" subtitle="Events unlock as you gather evidence" onClose={() => setOpenTab(null)}>
+        <TimelinePanel timeline={inv.timeline} baseIds={new Set(c.baseTimeline.map((t) => t.id))} />
+      </FocusSheet>
+
+      <FocusSheet open={openTab === "notebook"} title="Detective Notebook" subtitle="Pinned clues and personal notes" onClose={() => setOpenTab(null)}>
+        <NotebookPanel
+          notes={inv.notebook}
+          evidence={c.evidence}
+          onTogglePin={inv.togglePin}
+          onRemove={inv.removeNote}
+          onUpdate={inv.updateNote}
+          onAdd={inv.addCustomNote}
+        />
+      </FocusSheet>
+
+      <FocusSheet open={openTab === "forensics"} title="Forensics Lab" subtitle="Chain of custody & lab notes" onClose={() => setOpenTab(null)}>
+        <ForensicsPanel examined={examinedEvidence} />
+      </FocusSheet>
+
+      <FocusSheet open={openTab === "accuse"} title="Make an Accusation" subtitle="You get one chance. Choose carefully." onClose={() => setOpenTab(null)}>
+        <AccusePanel case={c} scores={inv.suspicionScores} revealed={suspicionRevealed} progress={inv.progress} />
+      </FocusSheet>
+
+      {/* Evidence detail modal */}
       <EvidenceModal
-        evidence={openEvidence}
-        important={openEvidence ? inv.important.has(openEvidence.id) : false}
-        inCompare={openEvidence ? inv.compareSet.includes(openEvidence.id) : false}
+        evidence={activeEvidence}
+        onClose={() => setActiveEvidence(null)}
+        important={activeEvidence ? inv.important.has(activeEvidence.id) : false}
+        pinned={
+          activeEvidence
+            ? inv.notebook.some((n) => n.evidenceId === activeEvidence.id && n.pinned)
+            : false
+        }
+        onToggleImportant={inv.toggleImportant}
+        onTogglePin={(evId) => {
+          const note = inv.notebook.find((n) => n.evidenceId === evId);
+          if (note) inv.togglePin(note.id);
+        }}
+        onCompare={inv.toggleCompare}
+        inCompare={activeEvidence ? inv.compareSet.includes(activeEvidence.id) : false}
         suspects={c.suspects}
-        onClose={() => setOpenEvidence(null)}
-        onToggleImportant={(id) => inv.toggleImportant(id)}
-        onToggleCompare={(id) => inv.toggleCompare(id)}
-        onPickSuspect={(id) => {
-          const s = c.suspects.find((x) => x.id === id);
-          if (s) {
-            setOpenEvidence(null);
-            handleInterview(s);
-          }
-        }}
       />
 
-      {/* ============= Suspect Drawer ============= */}
+      {/* Suspect drawer */}
       <SuspectDrawer
-        suspect={openSuspect}
-        score={openSuspect ? inv.suspicionScores[openSuspect.id] : undefined}
-        relatedEvidence={openSuspect ? c.evidence.filter((e) => e.relatedSuspectIds.includes(openSuspect.id)) : []}
-        examined={inv.examined}
-        onClose={() => setOpenSuspect(null)}
-        onAccuse={(s) => {
-          setAccusing(s);
-          setOpenSuspect(null);
-        }}
+        suspect={activeSuspect}
+        onClose={() => setActiveSuspect(null)}
+        score={activeSuspect ? inv.suspicionScores[activeSuspect.id]?.score ?? 0 : 0}
+        band={activeSuspect ? inv.suspicionScores[activeSuspect.id]?.band ?? "low" : "low"}
+        revealed={suspicionRevealed}
+        interviewed={activeSuspect ? inv.interviewed.has(activeSuspect.id) : false}
+        onInterview={inv.interviewSuspect}
       />
 
-      {/* ============= Accusation Modal ============= */}
-      <Dialog open={!!accusing} onOpenChange={(o) => !o && setAccusing(null)}>
-        <DialogContent className="max-w-md border-border/70 bg-surface text-foreground">
-          {accusing && (
-            <>
-              <DialogHeader>
-                <DialogTitle className="flex items-center gap-2 text-xl">
-                  <Gavel className="h-5 w-5 text-primary" /> Make accusation
-                </DialogTitle>
-                <DialogDescription>
-                  You are about to formally accuse <span className="font-semibold text-foreground">{accusing.name}</span> of the murder of {c.victim.name}. This cannot be undone.
-                </DialogDescription>
-              </DialogHeader>
-              <div className="flex gap-2 pt-2">
-                <Button variant="secondary" className="flex-1" onClick={() => setAccusing(null)}>Cancel</Button>
-                <Button
-                  variant="primary"
-                  className="flex-1"
-                  onClick={() => {
-                    setAccused(accusing.id);
-                    setAccusing(null);
-                  }}
-                >
-                  Confirm accusation
-                </Button>
-              </div>
-            </>
-          )}
+      {/* Case brief modal */}
+      <Dialog open={briefOpen} onOpenChange={(o) => !o && setBriefOpen(false)}>
+        <DialogContent className="max-w-2xl border-border/70 bg-surface">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <BookOpen className="h-4 w-4 text-accent" /> Case Brief
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4 text-sm">
+            <div className="grid grid-cols-2 gap-4 rounded-lg border border-border/60 bg-background/40 p-4">
+              <BriefRow label="Victim" value={c.victim.name} />
+              <BriefRow label="Occupation" value={c.victim.occupation} />
+              <BriefRow label="Cause of death" value={c.victim.causeOfDeath} />
+              <BriefRow label="Time of death" value={c.victim.timeOfDeath} />
+              <BriefRow label="Location" value={c.location} />
+              <BriefRow label="Date" value={c.date} />
+            </div>
+            <p className="leading-relaxed text-muted-foreground">{c.briefing}</p>
+          </div>
         </DialogContent>
       </Dialog>
     </PageLayout>
   );
 }
 
-/* =====================================================================
-   LEFT PANELS
-   ===================================================================== */
+/* ---------- Top strip ---------- */
 
-function CaseOverviewPanel({ c }: { c: Case }) {
+function ProgressPill({ progress, xp, intuition }: { progress: number; xp: number; intuition: number }) {
   return (
-    <Card gradient className="overflow-hidden">
-      <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-accent">Case overview</p>
-      <h1 className="mt-2 text-2xl font-semibold leading-tight tracking-tight">{c.title}</h1>
-      <p className="mt-2 text-sm text-muted-foreground">{c.blurb}</p>
-
-      <dl className="mt-5 space-y-2 text-xs">
-        <Row icon={Calendar} label="Date" value={c.date} />
-        <Row icon={MapPin} label="Scene" value={c.location} />
-        <Row icon={Clock} label="Est." value={`${c.estimatedMinutes} min`} />
-        <Row icon={Star} label="Difficulty" value={<DifficultyStars value={c.difficulty} />} />
-      </dl>
-
-      <div className="mt-5 rounded-md border border-border/60 bg-background/40 p-3">
-        <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Victim</p>
-        <p className="mt-1 text-sm font-semibold">{c.victim.name}, {c.victim.age}</p>
-        <p className="text-xs text-muted-foreground">{c.victim.occupation}</p>
-        <p className="mt-2 text-[11px] text-muted-foreground"><span className="text-accent">COD:</span> {c.victim.causeOfDeath}</p>
-        <p className="text-[11px] text-muted-foreground"><span className="text-accent">TOD:</span> {c.victim.timeOfDeath}</p>
+    <div className="ml-auto flex items-center gap-3 rounded-full border border-border/70 bg-surface px-3 py-1.5 text-xs">
+      <div className="flex items-center gap-1.5">
+        <span className="text-muted-foreground">Progress</span>
+        <span className="font-mono font-semibold text-foreground"><AnimatedNumber value={progress} />%</span>
       </div>
-    </Card>
-  );
-}
-
-function Row({ icon: Icon, label, value }: { icon: React.ComponentType<{ className?: string }>; label: string; value: React.ReactNode }) {
-  return (
-    <div className="flex items-center justify-between gap-3">
-      <span className="flex items-center gap-1.5 text-muted-foreground">
-        <Icon className="h-3 w-3 text-accent" /> {label}
-      </span>
-      <span className="truncate text-right text-foreground">{value}</span>
+      <span className="h-3 w-px bg-border" />
+      <div className="flex items-center gap-1.5">
+        <Sparkles className="h-3 w-3 text-accent" />
+        <span className="font-mono font-semibold text-accent"><AnimatedNumber value={xp} /></span>
+      </div>
+      <span className="h-3 w-px bg-border" />
+      <div className="flex items-center gap-1.5" title="Detective Intuition">
+        <Flame className={cn("h-3 w-3", intuition >= 100 ? "text-primary" : "text-muted-foreground")} />
+        <span className="font-mono font-semibold">{intuition}</span>
+      </div>
     </div>
   );
 }
 
-function ProgressPanel({ c, inv }: { c: Case; inv: ReturnType<typeof useInvestigation> }) {
+function BriefRow({ label, value }: { label: string; value: string }) {
   return (
-    <Card>
-      <div className="flex items-center justify-between">
-        <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-accent">Investigation progress</p>
-        <AnimatedNumber value={inv.progress} className="font-mono text-sm font-bold text-accent" format={(n) => `${n}%`} />
-      </div>
-      <div className="mt-3 h-2 w-full overflow-hidden rounded-full bg-muted/30 ring-1 ring-border/60">
-        <motion.div
-          className="h-full rounded-full bg-gradient-to-r from-primary via-primary to-accent shadow-glow"
-          initial={false}
-          animate={{ width: `${inv.progress}%` }}
-          transition={{ type: "spring", stiffness: 110, damping: 20 }}
-        />
-      </div>
-      <div className="mt-4 space-y-2.5 text-[11px]">
-        <MiniStat icon={ScanSearch} label="Crime scene" value={inv.investigated.size} max={c.hotspots.length} />
-        <MiniStat icon={Eye} label="Evidence examined" value={inv.examined.size} max={c.evidence.length} />
-        <MiniStat icon={UserCircle2} label="Suspects interviewed" value={inv.interviewed.size} max={c.suspects.length} />
-        <MiniStat icon={NotebookPen} label="Notebook entries" value={inv.notebook.length} />
-      </div>
-    </Card>
-  );
-}
-
-function MiniStat({ icon: Icon, label, value, max }: { icon: React.ComponentType<{ className?: string }>; label: string; value: number; max?: number }) {
-  return (
-    <div className="flex items-center justify-between gap-2 rounded-md border border-border/50 bg-background/40 px-2.5 py-1.5">
-      <span className="flex items-center gap-1.5 text-muted-foreground">
-        <Icon className="h-3 w-3 text-accent" /> {label}
-      </span>
-      <span className="font-mono text-foreground">
-        <AnimatedNumber value={value} duration={500} />
-        {typeof max === "number" && <span className="text-muted-foreground">/{max}</span>}
-      </span>
+    <div>
+      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="mt-0.5 text-sm font-medium">{value}</p>
     </div>
   );
 }
 
-function IntuitionPanel({ intuition, xp }: { intuition: number; xp: number }) {
-  const charged = intuition >= 100;
-  return (
-    <Card className={`relative overflow-hidden ${charged ? "ring-1 ring-accent/40" : ""}`}>
-      {charged && (
-        <motion.div
-          aria-hidden
-          className="pointer-events-none absolute inset-0 rounded-xl"
-          animate={{ boxShadow: ["0 0 0 0 rgba(212,175,55,0)", "0 0 28px 4px rgba(212,175,55,0.35)", "0 0 0 0 rgba(212,175,55,0)"] }}
-          transition={{ duration: 2.4, repeat: Infinity, ease: "easeInOut" }}
-        />
-      )}
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <span className={`grid h-8 w-8 place-items-center rounded-lg ring-1 ${charged ? "bg-accent/15 text-accent ring-accent/40" : "bg-primary/15 text-primary ring-primary/30"}`}>
-            <Flame className="h-4 w-4" />
-          </span>
-          <div>
-            <p className="font-mono text-[10px] uppercase tracking-[0.25em] text-accent">Detective intuition</p>
-            <p className="text-xs text-muted-foreground">{charged ? "Hints available" : "Builds with key clues"}</p>
-          </div>
-        </div>
-        <AnimatedNumber value={intuition} className="font-mono text-lg font-bold text-foreground" format={(n) => `${n}`} />
-      </div>
-      <div className="mt-3 h-1.5 w-full overflow-hidden rounded-full bg-muted/30">
-        <motion.div
-          initial={false}
-          animate={{ width: `${intuition}%` }}
-          transition={{ type: "spring", stiffness: 90, damping: 18 }}
-          className={`h-full rounded-full ${charged ? "bg-gradient-to-r from-accent to-amber-300" : "bg-gradient-to-r from-primary to-accent"}`}
-        />
-      </div>
-      <div className="mt-3 flex items-center justify-between rounded-md border border-border/50 bg-background/40 px-2.5 py-2 text-[11px]">
-        <span className="flex items-center gap-1.5 text-muted-foreground"><Sparkles className="h-3 w-3 text-accent" /> Session XP</span>
-        <AnimatedNumber value={xp} className="font-mono font-semibold text-accent" format={(n) => `+${n}`} />
-      </div>
-    </Card>
-  );
-}
+/* ---------- Crime scene hero ---------- */
 
-/* =====================================================================
-   CENTER PANELS
-   ===================================================================== */
-
-function CrimeScenePanel({
-  c,
+function CrimeScene({
+  image,
+  hotspots,
   investigated,
-  examined,
-  onHotspot,
-  activeReveal,
+  hoverId,
+  onHover,
+  onSelect,
 }: {
-  c: Case;
+  image: string;
+  hotspots: Case["hotspots"];
   investigated: Set<string>;
-  examined: Set<string>;
-  onHotspot: (hotspotId: string, evidenceId: string, ev: React.MouseEvent) => void;
-  activeReveal: string | null;
+  hoverId: string | null;
+  onHover: (id: string | null) => void;
+  onSelect: (hs: Case["hotspots"][number], x: number, y: number) => void;
 }) {
   return (
-    <Card className="p-0 overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border/60">
-        <div className="flex items-center gap-2">
-          <ScanSearch className="h-4 w-4 text-accent" />
-          <h2 className="text-sm font-semibold uppercase tracking-widest">Crime scene · Car 7</h2>
-        </div>
-        <Badge tone="muted">
-          {investigated.size}/{c.hotspots.length} objects investigated
-        </Badge>
-      </div>
-      <div className="relative aspect-[16/9] w-full">
+    <div className="group relative overflow-hidden rounded-2xl border border-border/70 bg-surface shadow-elevated">
+      <div className="relative aspect-[16/10]">
         <img
-          src={crimeSceneImg}
-          alt="Crime scene interior of train Car 7"
+          src={image}
+          alt="Crime scene: rear car of the 23:47 express"
           className="absolute inset-0 h-full w-full object-cover"
-          loading="lazy"
-          width={1280}
-          height={720}
         />
-        <div className="absolute inset-0 bg-gradient-to-t from-background/80 via-background/10 to-background/30" />
+        <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-background/85 via-background/25 to-transparent" />
+        <div className="pointer-events-none absolute inset-0 bg-[radial-gradient(circle_at_center,_transparent_50%,_rgba(11,15,20,0.55))]" />
 
-        {c.hotspots.map((h) => {
-          const done = investigated.has(h.id) || examined.has(h.evidenceId);
-          const revealing = activeReveal === h.id;
+        {/* Hotspots */}
+        {hotspots.map((h) => {
+          const done = investigated.has(h.id);
+          const active = hoverId === h.id;
           return (
             <button
               key={h.id}
-              type="button"
-              onClick={(e) => onHotspot(h.id, h.evidenceId, e)}
-              disabled={done}
+              onMouseEnter={() => onHover(h.id)}
+              onMouseLeave={() => onHover(null)}
+              onClick={(e) => {
+                const rect = (e.currentTarget as HTMLElement).getBoundingClientRect();
+                onSelect(h, rect.left + rect.width / 2, rect.top + rect.height / 2);
+              }}
+              style={{ left: `${h.x}%`, top: `${h.y}%` }}
+              className="absolute -translate-x-1/2 -translate-y-1/2"
               aria-label={h.label}
-              className="group absolute -translate-x-1/2 -translate-y-1/2"
-              style={{ left: `${h.x}%`, top: `${h.y}%` } as CSSProperties}
             >
-              <span className="relative grid place-items-center">
+              <span className="relative flex h-8 w-8 items-center justify-center">
                 {!done && (
-                  <motion.span
-                    aria-hidden
-                    className="absolute h-10 w-10 rounded-full bg-accent/30"
-                    animate={{ scale: [1, 1.6, 1], opacity: [0.6, 0, 0.6] }}
-                    transition={{ duration: 2.2, repeat: Infinity, ease: "easeOut" }}
-                  />
+                  <>
+                    <span className="absolute inset-0 animate-ping rounded-full bg-accent/40" />
+                    <span className="absolute inset-1 rounded-full bg-accent/25 blur-md" />
+                  </>
                 )}
                 <span
-                  className={`relative grid h-5 w-5 place-items-center rounded-full ring-2 ring-background transition-all ${
+                  className={cn(
+                    "relative grid h-5 w-5 place-items-center rounded-full border-2 transition-all",
                     done
-                      ? "bg-accent/30 text-accent ring-accent/60"
-                      : "bg-accent text-background shadow-glow group-hover:scale-110"
-                  }`}
+                      ? "border-emerald-400/70 bg-emerald-400/30"
+                      : "border-accent bg-background/70 group-hover:scale-110",
+                    active && "scale-125 border-accent shadow-glow",
+                  )}
                 >
-                  {done ? <CheckCircle2 className="h-3 w-3" /> : <Plus className="h-3 w-3" />}
+                  {done ? <Eye className="h-2.5 w-2.5 text-emerald-200" /> : <span className="h-1.5 w-1.5 rounded-full bg-accent" />}
                 </span>
               </span>
-              <AnimatePresence>
-                {revealing && (
-                  <motion.span
-                    initial={{ opacity: 0, scale: 0.6 }}
-                    animate={{ opacity: 1, scale: 1 }}
-                    exit={{ opacity: 0, scale: 0.8 }}
-                    className="absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-accent/40 bg-background/90 px-2 py-1 text-[10px] font-medium text-accent backdrop-blur"
-                  >
-                    {h.label}
-                  </motion.span>
-                )}
-              </AnimatePresence>
-              <span className="pointer-events-none absolute left-1/2 top-full mt-2 hidden -translate-x-1/2 whitespace-nowrap rounded-md border border-border/60 bg-background/90 px-2 py-1 text-[10px] text-muted-foreground group-hover:block">
-                {h.label}
-              </span>
+              {active && (
+                <span className="pointer-events-none absolute left-1/2 top-full mt-2 -translate-x-1/2 whitespace-nowrap rounded-md border border-border/70 bg-background/95 px-2 py-1 text-[11px] font-medium text-foreground shadow-elevated backdrop-blur">
+                  {h.label}
+                </span>
+              )}
+            </button>
+          );
+        })}
+
+        {/* Corner label */}
+        <div className="absolute left-4 top-4 flex items-center gap-2 rounded-full border border-border/60 bg-background/70 px-3 py-1 text-[10px] font-mono uppercase tracking-widest text-muted-foreground backdrop-blur">
+          <span className="h-1.5 w-1.5 animate-pulse rounded-full bg-primary" /> Live scene
+        </div>
+        <div className="absolute bottom-4 right-4 rounded-full border border-border/60 bg-background/70 px-3 py-1 text-[10px] font-mono uppercase tracking-widest text-accent backdrop-blur">
+          {investigated.size}/{hotspots.length} objects examined
+        </div>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Side rail (kept small; not a full panel) ---------- */
+
+function SceneSideRail({
+  case: c,
+  progress,
+  intuition,
+  xp,
+  examinedCount,
+  totalEvidence,
+  onJumpTab,
+}: {
+  case: Case;
+  progress: number;
+  intuition: number;
+  xp: number;
+  examinedCount: number;
+  totalEvidence: number;
+  onJumpTab: (t: DockTab) => void;
+}) {
+  return (
+    <aside className="flex flex-col gap-4">
+      {/* Objective */}
+      <div className="rounded-2xl border border-border/70 bg-surface p-5">
+        <p className="font-mono text-[10px] uppercase tracking-widest text-accent">Objective</p>
+        <h2 className="mt-1 text-base font-semibold leading-tight">Identify the killer aboard Car 7.</h2>
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+          Examine the scene, then use the dock below to review evidence, suspects, and your notebook.
+        </p>
+      </div>
+
+      {/* Progress */}
+      <div className="rounded-2xl border border-border/70 bg-surface p-5">
+        <div className="flex items-center justify-between">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Investigation</p>
+          <span className="font-mono text-xs text-foreground"><AnimatedNumber value={progress} />%</span>
+        </div>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background/60">
+          <div className="h-full rounded-full bg-gradient-to-r from-accent to-primary transition-all duration-700" style={{ width: `${progress}%` }} />
+        </div>
+        <div className="mt-4 grid grid-cols-2 gap-3 text-center">
+          <StatMini label="Evidence" value={`${examinedCount}/${totalEvidence}`} />
+          <StatMini label="XP" value={<AnimatedNumber value={xp} />} accent />
+        </div>
+      </div>
+
+      {/* Intuition */}
+      <div className="rounded-2xl border border-border/70 bg-surface p-5">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Flame className={cn("h-4 w-4", intuition >= 100 ? "text-primary" : "text-accent")} />
+            <p className="text-sm font-semibold">Detective Intuition</p>
+          </div>
+          <span className="font-mono text-xs text-muted-foreground">{intuition}/100</span>
+        </div>
+        <div className="mt-2 h-1.5 overflow-hidden rounded-full bg-background/60">
+          <div
+            className={cn(
+              "h-full rounded-full transition-all duration-700",
+              intuition >= 100 ? "bg-primary shadow-glow" : "bg-gradient-to-r from-accent/70 to-primary/70",
+            )}
+            style={{ width: `${intuition}%` }}
+          />
+        </div>
+        <p className="mt-2 text-[11px] text-muted-foreground">
+          {intuition >= 100 ? "Hint unlocked — you may accuse with confidence." : "Fills as you uncover meaningful clues."}
+        </p>
+      </div>
+
+      <button
+        onClick={() => onJumpTab("accuse")}
+        className="group flex items-center justify-between rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/20 to-primary/5 p-4 text-left transition-all hover:border-primary/70 hover:shadow-glow"
+      >
+        <div>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-primary">Ready?</p>
+          <p className="mt-0.5 text-sm font-semibold">Make Accusation</p>
+        </div>
+        <Gavel className="h-5 w-5 text-primary transition-transform group-hover:rotate-12" />
+      </button>
+    </aside>
+  );
+}
+
+function StatMini({ label, value, accent }: { label: string; value: React.ReactNode; accent?: boolean }) {
+  return (
+    <div className="rounded-lg border border-border/60 bg-background/40 p-2">
+      <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className={cn("mt-0.5 text-sm font-semibold", accent && "text-accent")}>{value}</p>
+    </div>
+  );
+}
+
+/* ---------- Bottom dock ---------- */
+
+function BottomDock({
+  openTab,
+  onOpen,
+  counts,
+}: {
+  openTab: DockTab | null;
+  onOpen: (t: DockTab | null) => void;
+  counts: Record<Exclude<DockTab, "accuse">, number>;
+}) {
+  return (
+    <div className="pointer-events-none fixed inset-x-0 bottom-4 z-40 flex justify-center px-4">
+      <div className="pointer-events-auto flex max-w-full items-center gap-1 overflow-x-auto rounded-2xl border border-border/70 bg-background/85 p-1.5 shadow-elevated backdrop-blur-xl">
+        {DOCK_TABS.map((t) => {
+          const active = openTab === t.id;
+          const Icon = t.icon;
+          const count = t.id === "accuse" ? undefined : counts[t.id];
+          return (
+            <button
+              key={t.id}
+              onClick={() => onOpen(active ? null : t.id)}
+              className={cn(
+                "group relative inline-flex items-center gap-2 whitespace-nowrap rounded-xl px-3.5 py-2 text-sm font-medium transition-all",
+                active
+                  ? t.id === "accuse"
+                    ? "bg-primary text-primary-foreground shadow-glow"
+                    : "bg-surface text-foreground ring-1 ring-accent/40"
+                  : "text-muted-foreground hover:bg-surface hover:text-foreground",
+                t.id === "accuse" && !active && "text-primary",
+              )}
+            >
+              <Icon className="h-4 w-4" />
+              <span className="hidden sm:inline">{t.label}</span>
+              {count !== undefined && count > 0 && (
+                <span className="rounded-full bg-accent/15 px-1.5 py-0.5 text-[10px] font-mono text-accent">{count}</span>
+              )}
             </button>
           );
         })}
       </div>
-      <div className="border-t border-border/60 px-5 py-3 text-xs text-muted-foreground">
-        Move across the scene — glowing points reveal evidence. Each examination feeds your detective intuition.
-      </div>
-    </Card>
-  );
-}
-
-function EvidenceLockerPanel({
-  c,
-  inv,
-  onOpen,
-}: {
-  c: Case;
-  inv: ReturnType<typeof useInvestigation>;
-  onOpen: (e: Evidence, ev?: React.MouseEvent) => void;
-}) {
-  return (
-    <Card className="p-0 overflow-hidden">
-      <div className="flex items-center justify-between px-5 py-3 border-b border-border/60">
-        <div className="flex items-center gap-2">
-          <FileText className="h-4 w-4 text-accent" />
-          <h2 className="text-sm font-semibold uppercase tracking-widest">Evidence locker</h2>
-        </div>
-        <Badge tone="muted">{inv.examined.size}/{c.evidence.length} collected</Badge>
-      </div>
-      <div className="grid gap-3 p-5 sm:grid-cols-2 xl:grid-cols-3">
-        {c.evidence.map((e, i) => {
-          const examined = inv.examined.has(e.id);
-          const important = inv.important.has(e.id);
-          const compare = inv.compareSet.includes(e.id);
-          const Icon = evidenceIcon[e.tag];
-          const imp = importanceTone[e.importance];
-          return (
-            <motion.div
-              key={e.id}
-              initial={{ opacity: 0, y: 12 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.04 * i, duration: 0.3 }}
-              whileHover={{ y: -3 }}
-              className="relative"
-            >
-              <button
-                type="button"
-                onClick={(ev) => onOpen(e, ev)}
-                className={`group relative flex h-full w-full flex-col gap-3 overflow-hidden rounded-lg border bg-gradient-to-br from-surface to-background/40 p-4 text-left transition-all ${
-                  examined ? "border-accent/40 shadow-glow" : "border-border/70 hover:border-accent/40"
-                }`}
-              >
-                <div className="flex items-start justify-between gap-2">
-                  <span className={`grid h-9 w-9 place-items-center rounded-md ring-1 ${examined ? "bg-accent/15 text-accent ring-accent/30" : "bg-primary/15 text-primary ring-primary/30"}`}>
-                    <Icon className="h-4 w-4" />
-                  </span>
-                  <div className="flex flex-col items-end gap-1">
-                    <Badge tone={imp.tone}>{imp.label}</Badge>
-                    {examined ? (
-                      <span className="inline-flex items-center gap-1 text-[9px] uppercase tracking-widest text-accent">
-                        <CheckCircle2 className="h-3 w-3" /> Logged
-                      </span>
-                    ) : (
-                      <span className="text-[9px] uppercase tracking-widest text-muted-foreground">Unexamined</span>
-                    )}
-                  </div>
-                </div>
-                <div className="min-w-0">
-                  <h3 className="truncate text-sm font-semibold text-foreground">{e.label}</h3>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    {examined ? e.summary : "Tap to examine — details restricted until reviewed."}
-                  </p>
-                </div>
-                <div className="mt-auto flex items-center justify-between border-t border-border/50 pt-2 text-[10px] uppercase tracking-widest">
-                  <span className="text-muted-foreground capitalize">{e.tag}</span>
-                  <span className="font-mono text-accent">+{e.xp} XP</span>
-                </div>
-                {(important || compare) && (
-                  <span className="absolute left-2 top-2 flex gap-1">
-                    {important && <span className="grid h-5 w-5 place-items-center rounded-full bg-amber-400/20 text-amber-300 ring-1 ring-amber-400/40"><Star className="h-3 w-3" /></span>}
-                    {compare && <span className="grid h-5 w-5 place-items-center rounded-full bg-primary/20 text-primary ring-1 ring-primary/40"><GitCompare className="h-3 w-3" /></span>}
-                  </span>
-                )}
-              </button>
-            </motion.div>
-          );
-        })}
-      </div>
-    </Card>
-  );
-}
-
-function ActiveCluesPanel({
-  c,
-  compareEvidence,
-  onClear,
-}: {
-  c: Case;
-  compareEvidence: Evidence[];
-  onClear: () => void;
-}) {
-  return (
-    <Card>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <GitCompare className="h-4 w-4 text-accent" />
-          <h2 className="text-sm font-semibold uppercase tracking-widest">Active clues</h2>
-        </div>
-        {compareEvidence.length > 0 && (
-          <button onClick={onClear} className="text-[11px] text-muted-foreground hover:text-foreground">Clear</button>
-        )}
-      </div>
-      {compareEvidence.length === 0 ? (
-        <p className="mt-3 rounded-md border border-dashed border-border/60 bg-background/40 p-4 text-sm text-muted-foreground">
-          Open an evidence card and pick <span className="text-accent">Compare</span> to line up two clues side-by-side.
-        </p>
-      ) : (
-        <div className="mt-3 grid gap-3 sm:grid-cols-2">
-          {compareEvidence.map((e) => (
-            <div key={e.id} className="rounded-md border border-primary/30 bg-primary/5 p-3">
-              <p className="text-[10px] uppercase tracking-widest text-primary">{e.tag}</p>
-              <p className="mt-1 text-sm font-semibold">{e.label}</p>
-              <p className="mt-1 text-xs text-muted-foreground">{e.summary}</p>
-            </div>
-          ))}
-          {compareEvidence.length === 2 && (
-            <div className="sm:col-span-2 flex items-start gap-2 rounded-md border border-accent/30 bg-accent/5 p-3 text-xs text-muted-foreground">
-              <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-              Look for overlapping people, places, or timings — the killer hides in the seam between two truths.
-            </div>
-          )}
-        </div>
-      )}
-      {/* Hint when intuition is full */}
-      <DeductionHint c={c} />
-    </Card>
-  );
-}
-
-function DeductionHint({ c }: { c: Case }) {
-  void c;
-  return (
-    <div className="mt-4 flex items-start gap-2 rounded-md border border-border/60 bg-background/40 p-3 text-xs text-muted-foreground">
-      <Lightbulb className="mt-0.5 h-4 w-4 shrink-0 text-accent" />
-      Two pieces of evidence place the same person in Car 7 at 23:51 — but their alibi puts them elsewhere. Cross-reference the conductor's testimony with the cufflink.
     </div>
   );
 }
 
-/* =====================================================================
-   RIGHT PANELS
-   ===================================================================== */
+/* ---------- Focus sheet (dims scene) ---------- */
 
-function SuspectsPanel({
-  suspects,
-  scores,
-  interviewed,
-  onPick,
-}: {
-  suspects: Suspect[];
-  scores: Record<string, { score: number; band: SuspicionLevel }>;
-  interviewed: Set<string>;
-  onPick: (s: Suspect) => void;
-}) {
-  return (
-    <Card className="p-0 overflow-hidden">
-      <div className="flex items-center justify-between border-b border-border/60 px-5 py-3">
-        <div className="flex items-center gap-2">
-          <Users className="h-4 w-4 text-accent" />
-          <h2 className="text-sm font-semibold uppercase tracking-widest">Suspects</h2>
-        </div>
-        <Badge tone="muted">{suspects.length}</Badge>
-      </div>
-      <ul className="divide-y divide-border/50">
-        {suspects.map((s, i) => {
-          const score = scores[s.id];
-          const meta = suspicionMeta[score.band];
-          const seen = interviewed.has(s.id);
-          return (
-            <motion.li
-              key={s.id}
-              initial={{ opacity: 0, y: 6 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.04 * i }}
-            >
-              <button
-                type="button"
-                onClick={() => onPick(s)}
-                className="group flex w-full items-center gap-3 px-5 py-3 text-left transition-colors hover:bg-surface-elevated/40"
-              >
-                <span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full bg-gradient-to-br from-primary/30 to-accent/20 font-mono text-xs font-semibold ring-1 ${meta.ring}`}>
-                  {s.initials}
-                </span>
-                <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <span className="truncate text-sm font-semibold">{s.name}</span>
-                    {seen && <CheckCircle2 className="h-3.5 w-3.5 text-accent" />}
-                  </div>
-                  <div className="truncate text-[11px] text-muted-foreground">{s.occupation}</div>
-                  <div className="mt-1.5 h-1.5 w-full overflow-hidden rounded-full bg-muted/30">
-                    <motion.div
-                      initial={false}
-                      animate={{ width: `${score.score}%` }}
-                      transition={{ type: "spring", stiffness: 110, damping: 22 }}
-                      className={`h-full rounded-full ${meta.bar}`}
-                    />
-                  </div>
-                </div>
-                <div className="text-right">
-                  <Badge tone={meta.tone}>{meta.label}</Badge>
-                  <div className="mt-1 font-mono text-[10px] text-muted-foreground">
-                    <AnimatedNumber value={score.score} duration={500} />
-                  </div>
-                </div>
-              </button>
-            </motion.li>
-          );
-        })}
-      </ul>
-    </Card>
-  );
-}
-
-function TimelinePanel({ timeline, totalUnlockable, examined }: { timeline: { id: string; time: string; label: string; detail: string }[]; totalUnlockable: number; examined: Set<string> }) {
-  return (
-    <Card>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4 text-accent" />
-          <h2 className="text-sm font-semibold uppercase tracking-widest">Timeline</h2>
-        </div>
-        <Badge tone="muted">{examined.size}/{totalUnlockable} unlocks</Badge>
-      </div>
-      <ol className="relative mt-4 space-y-3">
-        <span aria-hidden className="absolute left-[22px] top-1 bottom-1 w-px bg-border/60" />
-        <AnimatePresence initial={false}>
-          {timeline.map((t) => (
-            <motion.li
-              key={t.id}
-              layout
-              initial={{ opacity: 0, x: -8 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ type: "spring", stiffness: 200, damping: 24 }}
-              className="relative flex items-start gap-3 pl-1"
-            >
-              <span className="relative z-10 grid h-11 w-11 shrink-0 place-items-center rounded-full bg-surface ring-1 ring-border/70">
-                <span className="font-mono text-[10px] font-bold text-accent">{t.time}</span>
-              </span>
-              <div className="min-w-0 flex-1 pt-1">
-                <p className="text-sm font-semibold">{t.label}</p>
-                <p className="text-xs text-muted-foreground">{t.detail}</p>
-              </div>
-            </motion.li>
-          ))}
-        </AnimatePresence>
-      </ol>
-    </Card>
-  );
-}
-
-function NotebookPanel({
-  c,
-  pinned,
-  others,
-  noteDraft,
-  setNoteDraft,
-  onAdd,
-  onTogglePin,
-  onRemove,
-  onUpdate,
-}: {
-  c: Case;
-  pinned: { id: string; evidenceId: string; note: string; at: string; pinned: boolean; custom: boolean }[];
-  others: { id: string; evidenceId: string; note: string; at: string; pinned: boolean; custom: boolean }[];
-  noteDraft: string;
-  setNoteDraft: (v: string) => void;
-  onAdd: () => void;
-  onTogglePin: (id: string) => void;
-  onRemove: (id: string) => void;
-  onUpdate: (id: string, n: string) => void;
-}) {
-  return (
-    <Card>
-      <div className="flex items-center justify-between">
-        <div className="flex items-center gap-2">
-          <NotebookPen className="h-4 w-4 text-accent" />
-          <h2 className="text-sm font-semibold uppercase tracking-widest">Detective notebook</h2>
-        </div>
-        <Badge tone="muted">{pinned.length + others.length}</Badge>
-      </div>
-
-      <div className="mt-3 flex gap-2">
-        <input
-          value={noteDraft}
-          onChange={(e) => setNoteDraft(e.target.value)}
-          onKeyDown={(e) => { if (e.key === "Enter") onAdd(); }}
-          placeholder="Add a hunch, theory, or clue…"
-          className="flex-1 rounded-md border border-border/60 bg-background/60 px-3 py-2 text-xs text-foreground placeholder:text-muted-foreground focus:border-accent/60 focus:outline-none"
-        />
-        <Button size="sm" variant="secondary" onClick={onAdd}><Plus className="h-3.5 w-3.5" /></Button>
-      </div>
-
-      <div className="mt-4 space-y-3">
-        {pinned.length > 0 && (
-          <Section title="Pinned">
-            <NoteList notes={pinned} c={c} onTogglePin={onTogglePin} onRemove={onRemove} onUpdate={onUpdate} />
-          </Section>
-        )}
-        {others.length > 0 && (
-          <Section title="Log">
-            <NoteList notes={others} c={c} onTogglePin={onTogglePin} onRemove={onRemove} onUpdate={onUpdate} />
-          </Section>
-        )}
-        {pinned.length === 0 && others.length === 0 && (
-          <p className="rounded-md border border-dashed border-border/60 bg-background/40 p-4 text-xs text-muted-foreground">
-            Notes appear here as you examine evidence. Critical clues are pinned automatically.
-          </p>
-        )}
-      </div>
-    </Card>
-  );
-}
-
-function Section({ title, children }: { title: string; children: React.ReactNode }) {
-  return (
-    <div>
-      <p className="mb-2 text-[10px] uppercase tracking-widest text-muted-foreground">{title}</p>
-      {children}
-    </div>
-  );
-}
-
-function NoteList({
-  notes,
-  c,
-  onTogglePin,
-  onRemove,
-  onUpdate,
-}: {
-  notes: { id: string; evidenceId: string; note: string; at: string; pinned: boolean; custom: boolean }[];
-  c: Case;
-  onTogglePin: (id: string) => void;
-  onRemove: (id: string) => void;
-  onUpdate: (id: string, n: string) => void;
-}) {
-  return (
-    <ul className="space-y-2">
-      <AnimatePresence initial={false}>
-        {notes.map((n) => {
-          const ev = c.evidence.find((x) => x.id === n.evidenceId);
-          return (
-            <motion.li
-              key={n.id}
-              layout
-              initial={{ opacity: 0, x: -6 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 6 }}
-              className="group rounded-md border border-border/60 bg-background/40 p-3 transition-colors hover:border-accent/30"
-            >
-              <div className="flex items-baseline justify-between gap-2">
-                <span className="text-[11px] font-semibold text-foreground">
-                  {ev?.label ?? (n.custom ? "Personal note" : "Note")}
-                </span>
-                <span className="font-mono text-[10px] text-muted-foreground">{n.at}</span>
-              </div>
-              {n.custom ? (
-                <textarea
-                  value={n.note}
-                  onChange={(e) => onUpdate(n.id, e.target.value)}
-                  className="mt-1 w-full resize-none bg-transparent text-xs text-muted-foreground focus:outline-none"
-                  rows={2}
-                />
-              ) : (
-                <p className="mt-1 text-xs text-muted-foreground">{n.note}</p>
-              )}
-              <div className="mt-2 flex items-center gap-2 opacity-0 transition-opacity group-hover:opacity-100">
-                <button
-                  type="button"
-                  onClick={() => onTogglePin(n.id)}
-                  className="inline-flex items-center gap-1 rounded-md border border-border/60 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-foreground"
-                >
-                  {n.pinned ? <><PinOff className="h-3 w-3" /> Unpin</> : <><Pin className="h-3 w-3" /> Pin</>}
-                </button>
-                <button
-                  type="button"
-                  onClick={() => onRemove(n.id)}
-                  className="inline-flex items-center gap-1 rounded-md border border-border/60 px-2 py-0.5 text-[10px] text-muted-foreground hover:text-red-300"
-                >
-                  <Trash2 className="h-3 w-3" /> Remove
-                </button>
-              </div>
-            </motion.li>
-          );
-        })}
-      </AnimatePresence>
-    </ul>
-  );
-}
-
-function AccusationPanel({
-  c,
-  accused,
-  scores,
-  onAccuse,
-}: {
-  c: Case;
-  accused: string | null;
-  scores: Record<string, { score: number; band: SuspicionLevel }>;
-  onAccuse: (s: Suspect) => void;
-}) {
-  if (accused) {
-    const s = c.suspects.find((x) => x.id === accused);
-    return (
-      <Card className="border-accent/40">
-        <div className="flex items-center gap-2 text-sm font-semibold text-accent">
-          <Gavel className="h-4 w-4" /> Accusation filed
-        </div>
-        <p className="mt-2 text-xs text-muted-foreground">
-          Case sealed against <span className="font-semibold text-foreground">{s?.name}</span>. The verdict ships at dawn.
-        </p>
-      </Card>
-    );
-  }
-  return (
-    <Card>
-      <div className="flex items-center gap-2 text-sm font-semibold text-primary">
-        <AlertTriangle className="h-4 w-4" /> One accusation only
-      </div>
-      <p className="mt-1 text-[11px] text-muted-foreground">
-        Name the killer when you're certain. No second chances.
-      </p>
-      <div className="mt-3 space-y-2">
-        {c.suspects.map((s) => (
-          <button
-            key={s.id}
-            type="button"
-            onClick={() => onAccuse(s)}
-            className="flex w-full items-center justify-between rounded-md border border-border/60 bg-background/40 px-3 py-2 text-xs transition hover:border-primary/40"
-          >
-            <span className="truncate">{s.name}</span>
-            <span className="flex items-center gap-2 text-[10px] text-muted-foreground">
-              <span className="font-mono">{scores[s.id].score}</span>
-              <Gavel className="h-3.5 w-3.5 text-primary" />
-            </span>
-          </button>
-        ))}
-      </div>
-    </Card>
-  );
-}
-
-/* =====================================================================
-   MODALS / DRAWERS
-   ===================================================================== */
-
-function EvidenceModal({
-  evidence,
-  important,
-  inCompare,
-  suspects,
+function FocusSheet({
+  open,
+  title,
+  subtitle,
   onClose,
-  onToggleImportant,
-  onToggleCompare,
-  onPickSuspect,
+  children,
 }: {
-  evidence: Evidence | null;
-  important: boolean;
-  inCompare: boolean;
-  suspects: Suspect[];
+  open: boolean;
+  title: string;
+  subtitle?: string;
   onClose: () => void;
-  onToggleImportant: (id: string) => void;
-  onToggleCompare: (id: string) => void;
-  onPickSuspect: (id: string) => void;
+  children: React.ReactNode;
 }) {
   return (
-    <Dialog open={!!evidence} onOpenChange={(o) => !o && onClose()}>
-      <DialogContent className="max-w-2xl border-border/70 bg-surface text-foreground">
-        {evidence && (
-          <motion.div
-            initial={{ opacity: 0, rotateX: -8, y: 8 }}
-            animate={{ opacity: 1, rotateX: 0, y: 0 }}
-            transition={{ duration: 0.35, ease: "easeOut" }}
-            style={{ transformPerspective: 800 }}
-          >
-            <DialogHeader>
-              <div className="flex flex-wrap items-center gap-2">
-                <Badge tone="accent" className="capitalize">{evidence.tag}</Badge>
-                <Badge tone={importanceTone[evidence.importance].tone}>{importanceTone[evidence.importance].label} importance</Badge>
-                <span className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">EV · {evidence.id.toUpperCase()}</span>
-                <span className="ml-auto font-mono text-[10px] text-accent">+{evidence.xp} XP</span>
-              </div>
-              <DialogTitle className="mt-2 text-2xl">{evidence.label}</DialogTitle>
-              <DialogDescription>{evidence.summary}</DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 text-sm">
-              <p className="leading-relaxed text-foreground/90">{evidence.detail}</p>
-              <div className="grid gap-3 sm:grid-cols-3">
-                <Field label="Location" value={evidence.location} />
-                <Field label="Collected at" value={evidence.collectedAt} />
-                <Field label="Collected by" value={evidence.collectedBy} />
-              </div>
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Chain of custody</p>
-                <ol className="mt-2 space-y-1.5">
-                  {evidence.chainOfCustody.map((step, i) => (
-                    <li key={i} className="flex items-center gap-2 text-xs text-muted-foreground">
-                      <span className="grid h-5 w-5 place-items-center rounded-full bg-primary/15 font-mono text-[10px] text-primary">{i + 1}</span>
-                      {step}
-                    </li>
-                  ))}
-                </ol>
-              </div>
-
-              {evidence.relatedSuspectIds.length > 0 && (
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Related suspects</p>
-                  <div className="mt-2 flex flex-wrap gap-2">
-                    {evidence.relatedSuspectIds.map((sid) => {
-                      const s = suspects.find((x) => x.id === sid);
-                      if (!s) return null;
-                      return (
-                        <button
-                          key={sid}
-                          type="button"
-                          onClick={() => onPickSuspect(sid)}
-                          className="inline-flex items-center gap-2 rounded-full border border-border/60 bg-background/40 px-3 py-1 text-xs hover:border-primary/40"
-                        >
-                          <span className="grid h-5 w-5 place-items-center rounded-full bg-gradient-to-br from-primary/30 to-accent/20 font-mono text-[9px] font-bold">{s.initials}</span>
-                          {s.name}
-                        </button>
-                      );
-                    })}
-                  </div>
-                </div>
-              )}
-
-              <div className="rounded-md border border-accent/30 bg-accent/5 p-3 text-xs text-accent">
-                <NotebookPen className="mr-1.5 inline h-3 w-3" /> Added to notebook: {evidence.notebookNote}
-              </div>
-
-              <div className="flex flex-wrap gap-2 pt-1">
-                <Button
-                  size="sm"
-                  variant={important ? "accent" : "secondary"}
-                  onClick={() => onToggleImportant(evidence.id)}
-                >
-                  <Star className="h-3.5 w-3.5" /> {important ? "Marked important" : "Mark important"}
-                </Button>
-                <Button
-                  size="sm"
-                  variant={inCompare ? "primary" : "secondary"}
-                  onClick={() => onToggleCompare(evidence.id)}
-                >
-                  <GitCompare className="h-3.5 w-3.5" /> {inCompare ? "In compare" : "Compare"}
-                </Button>
-                <Button size="sm" variant="ghost" onClick={onClose}>
-                  <X className="h-3.5 w-3.5" /> Close
-                </Button>
-              </div>
+    <Sheet open={open} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent
+        side="bottom"
+        className="h-[78vh] rounded-t-3xl border-t border-border/70 bg-background/95 p-0 backdrop-blur-xl"
+      >
+        <div className="mx-auto flex h-full max-w-[1400px] flex-col">
+          <SheetHeader className="flex-row items-start justify-between border-b border-border/60 px-6 py-4 text-left">
+            <div>
+              <SheetTitle className="text-lg font-semibold">{title}</SheetTitle>
+              {subtitle && <p className="mt-0.5 text-xs text-muted-foreground">{subtitle}</p>}
             </div>
-          </motion.div>
-        )}
-      </DialogContent>
-    </Dialog>
-  );
-}
-
-function SuspectDrawer({
-  suspect,
-  score,
-  relatedEvidence,
-  examined,
-  onClose,
-  onAccuse,
-}: {
-  suspect: Suspect | null;
-  score?: { score: number; band: SuspicionLevel };
-  relatedEvidence: Evidence[];
-  examined: Set<string>;
-  onClose: () => void;
-  onAccuse: (s: Suspect) => void;
-}) {
-  return (
-    <Sheet open={!!suspect} onOpenChange={(o) => !o && onClose()}>
-      <SheetContent side="right" className="w-full overflow-y-auto border-border/70 bg-surface text-foreground sm:max-w-lg">
-        {suspect && score && (
-          <>
-            <SheetHeader>
-              <div className="flex items-center gap-3">
-                <span className={`grid h-14 w-14 place-items-center rounded-xl bg-gradient-to-br from-primary/30 via-surface to-accent/20 font-mono text-base font-semibold ring-1 ${suspicionMeta[score.band].ring}`}>
-                  {suspect.initials}
-                </span>
-                <div className="min-w-0">
-                  <SheetTitle className="truncate text-xl">{suspect.name}</SheetTitle>
-                  <SheetDescription className="truncate">{suspect.occupation}</SheetDescription>
-                </div>
-              </div>
-            </SheetHeader>
-
-            <div className="mt-5 space-y-5 text-sm">
-              <div>
-                <div className="flex items-center justify-between">
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Suspicion meter</p>
-                  <Badge tone={suspicionMeta[score.band].tone}><ShieldAlert className="h-3 w-3" /> {suspicionMeta[score.band].label}</Badge>
-                </div>
-                <div className="mt-2 h-2 w-full overflow-hidden rounded-full bg-muted/30">
-                  <motion.div
-                    initial={false}
-                    animate={{ width: `${score.score}%` }}
-                    transition={{ type: "spring", stiffness: 110, damping: 22 }}
-                    className={`h-full rounded-full ${suspicionMeta[score.band].bar}`}
-                  />
-                </div>
-                <p className="mt-1 text-right font-mono text-[10px] text-muted-foreground">{score.score}/100</p>
-              </div>
-
-              <Field label="Relationship to victim" value={suspect.relationship} />
-              <Field label="Motive" value={suspect.motive} />
-              <Field label="Alibi" value={suspect.alibi} />
-
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Statement</p>
-                <blockquote className="mt-2 border-l-2 border-accent/60 bg-surface-elevated/40 p-3 text-sm italic text-foreground/90">
-                  {suspect.statement}
-                </blockquote>
-              </div>
-
-              <div>
-                <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Timeline</p>
-                <ol className="mt-3 space-y-3">
-                  {suspect.timeline.map((t, i) => (
-                    <motion.li
-                      key={t.id}
-                      initial={{ opacity: 0, x: -6 }}
-                      animate={{ opacity: 1, x: 0 }}
-                      transition={{ delay: 0.04 * i }}
-                      className="relative flex gap-3"
-                    >
-                      <span className="w-12 shrink-0 font-mono text-xs text-accent">{t.time}</span>
-                      <div className="min-w-0 flex-1 border-l border-border/60 pl-3">
-                        <p className="text-sm font-semibold">{t.label}</p>
-                        <p className="text-xs text-muted-foreground">{t.detail}</p>
-                      </div>
-                    </motion.li>
-                  ))}
-                </ol>
-              </div>
-
-              {relatedEvidence.length > 0 && (
-                <div>
-                  <p className="text-[10px] uppercase tracking-widest text-muted-foreground">Linked evidence</p>
-                  <ul className="mt-2 space-y-1.5">
-                    {relatedEvidence.map((e) => (
-                      <li key={e.id} className={`flex items-center gap-2 rounded-md border px-2.5 py-1.5 text-xs ${examined.has(e.id) ? "border-accent/30 bg-accent/5 text-foreground" : "border-border/60 bg-background/40 text-muted-foreground"}`}>
-                        <Fingerprint className="h-3 w-3 text-accent" /> {e.label}
-                      </li>
-                    ))}
-                  </ul>
-                </div>
-              )}
-
-              <Button variant="primary" className="w-full" onClick={() => onAccuse(suspect)}>
-                <Gavel className="h-4 w-4" /> Accuse {suspect.name}
-              </Button>
-            </div>
-          </>
-        )}
+            <button
+              onClick={onClose}
+              className="rounded-md border border-border/60 bg-surface p-2 text-muted-foreground transition-colors hover:text-foreground"
+              aria-label="Close"
+            >
+              <X className="h-4 w-4" />
+            </button>
+          </SheetHeader>
+          <div className="flex-1 overflow-y-auto px-6 py-6">{children}</div>
+        </div>
       </SheetContent>
     </Sheet>
   );
 }
 
-function Field({ label, value }: { label: string; value: string }) {
+/* ---------- Evidence panel ---------- */
+
+function EvidencePanel({
+  all,
+  examinedIds,
+  importantIds,
+  onOpen,
+}: {
+  all: Evidence[];
+  examinedIds: Set<string>;
+  importantIds: Set<string>;
+  onOpen: (e: Evidence) => void;
+}) {
+  const examined = all.filter((e) => examinedIds.has(e.id));
+  const remaining = all.length - examined.length;
+
+  if (examined.length === 0) {
+    return (
+      <EmptyState
+        icon={Fingerprint}
+        title="No evidence collected yet"
+        body="Interact with objects on the crime scene above. Each clue you uncover will appear here as a collectible card."
+      />
+    );
+  }
+
   return (
     <div>
-      <p className="text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
-      <p className="mt-1 text-sm text-foreground">{value}</p>
+      <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+        {examined.map((e) => (
+          <EvidenceCard key={e.id} evidence={e} important={importantIds.has(e.id)} onClick={() => onOpen(e)} />
+        ))}
+      </div>
+      {remaining > 0 && (
+        <p className="mt-6 text-center text-xs text-muted-foreground">
+          <Lock className="mr-1 inline h-3 w-3" /> {remaining} more clue{remaining === 1 ? "" : "s"} hidden on the scene.
+        </p>
+      )}
+    </div>
+  );
+}
+
+function EvidenceCard({ evidence, important, onClick }: { evidence: Evidence; important: boolean; onClick: () => void }) {
+  const Icon = evidenceIcon[evidence.tag];
+  return (
+    <button
+      onClick={onClick}
+      className="group relative flex h-full flex-col overflow-hidden rounded-xl border border-border/70 bg-surface p-4 text-left transition-all hover:-translate-y-1 hover:border-accent/40 hover:shadow-glow"
+    >
+      {important && (
+        <span className="absolute right-3 top-3 text-primary">
+          <Pin className="h-3.5 w-3.5 fill-primary" />
+        </span>
+      )}
+      <div className="mb-3 flex h-10 w-10 items-center justify-center rounded-lg border border-border/60 bg-background/60 text-accent">
+        <Icon className="h-5 w-5" />
+      </div>
+      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{evidence.tag}</p>
+      <p className="mt-0.5 text-sm font-semibold leading-tight text-foreground">{evidence.label}</p>
+      <p className="mt-1 line-clamp-2 text-xs text-muted-foreground">{evidence.summary}</p>
+      <div className="mt-3 flex items-center justify-between">
+        <Badge tone={importanceTone[evidence.importance]}>{evidence.importance}</Badge>
+        <span className="text-[10px] font-mono text-muted-foreground">+{evidence.xp} XP</span>
+      </div>
+    </button>
+  );
+}
+
+/* ---------- Evidence modal ---------- */
+
+function EvidenceModal({
+  evidence,
+  onClose,
+  important,
+  pinned,
+  onToggleImportant,
+  onTogglePin,
+  onCompare,
+  inCompare,
+  suspects,
+}: {
+  evidence: Evidence | null;
+  onClose: () => void;
+  important: boolean;
+  pinned: boolean;
+  onToggleImportant: (id: string) => void;
+  onTogglePin: (id: string) => void;
+  onCompare: (id: string) => void;
+  inCompare: boolean;
+  suspects: Suspect[];
+}) {
+  if (!evidence) return null;
+  const Icon = evidenceIcon[evidence.tag];
+  const related = suspects.filter((s) => evidence.relatedSuspectIds.includes(s.id));
+  return (
+    <Dialog open={!!evidence} onOpenChange={(o) => !o && onClose()}>
+      <DialogContent className="max-w-2xl border-border/70 bg-surface p-0">
+        <div className="border-b border-border/60 bg-gradient-to-br from-surface to-background/60 p-6">
+          <div className="flex items-start gap-4">
+            <div className="grid h-12 w-12 place-items-center rounded-xl border border-accent/40 bg-accent/10 text-accent">
+              <Icon className="h-6 w-6" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <DialogHeader className="text-left">
+                <DialogTitle className="text-lg font-semibold">{evidence.label}</DialogTitle>
+              </DialogHeader>
+              <div className="mt-2 flex flex-wrap items-center gap-2">
+                <Badge tone={importanceTone[evidence.importance]}>{evidence.importance}</Badge>
+                <Badge tone="muted">{evidence.tag}</Badge>
+                <span className="font-mono text-[10px] uppercase tracking-widest text-accent">+{evidence.xp} XP</span>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div className="space-y-4 p-6 text-sm">
+          <p className="leading-relaxed text-foreground/90">{evidence.detail}</p>
+
+          <div className="grid grid-cols-2 gap-3 rounded-lg border border-border/60 bg-background/40 p-3 text-xs">
+            <BriefRow label="Location" value={evidence.location} />
+            <BriefRow label="Collected" value={`${evidence.collectedAt} · ${evidence.collectedBy}`} />
+          </div>
+
+          {related.length > 0 && (
+            <div>
+              <p className="mb-2 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Related suspects</p>
+              <div className="flex flex-wrap gap-2">
+                {related.map((s) => (
+                  <span key={s.id} className="inline-flex items-center gap-1.5 rounded-full border border-border/60 bg-background/60 px-2.5 py-1 text-xs">
+                    <span className="grid h-5 w-5 place-items-center rounded-full bg-accent/15 font-mono text-[9px] text-accent">{s.initials}</span>
+                    {s.name}
+                  </span>
+                ))}
+              </div>
+            </div>
+          )}
+
+          <div className="flex flex-wrap gap-2 pt-2">
+            <Button variant="secondary" size="sm" onClick={() => onToggleImportant(evidence.id)}>
+              {important ? <Pin className="h-4 w-4 fill-primary text-primary" /> : <Pin className="h-4 w-4" />} Mark important
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => onTogglePin(evidence.id)}>
+              {pinned ? <PinOff className="h-4 w-4" /> : <NotebookPen className="h-4 w-4" />} {pinned ? "Unpin from notebook" : "Pin to notebook"}
+            </Button>
+            <Button variant="secondary" size="sm" onClick={() => onCompare(evidence.id)}>
+              <ScanSearch className="h-4 w-4" /> {inCompare ? "Remove from compare" : "Add to compare"}
+            </Button>
+          </div>
+        </div>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
+/* ---------- Suspects panel ---------- */
+
+function SuspectsPanel({
+  suspects,
+  scores,
+  interviewed,
+  revealed,
+  onSelect,
+}: {
+  suspects: Suspect[];
+  scores: ReturnType<typeof useInvestigation>["suspicionScores"];
+  interviewed: Set<string>;
+  revealed: boolean;
+  onSelect: (s: Suspect) => void;
+}) {
+  const ordered = revealed
+    ? [...suspects].sort((a, b) => (scores[b.id]?.score ?? 0) - (scores[a.id]?.score ?? 0))
+    : suspects;
+  return (
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+      {ordered.map((s) => {
+        const sc = scores[s.id];
+        const meta = sc ? suspicionMeta[sc.band] : suspicionMeta.low;
+        return (
+          <button
+            key={s.id}
+            onClick={() => onSelect(s)}
+            className="group flex items-start gap-4 rounded-xl border border-border/70 bg-surface p-4 text-left transition-all hover:-translate-y-0.5 hover:border-accent/40"
+          >
+            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-xl border border-border/60 bg-background/60 font-mono text-sm text-accent">
+              {s.initials}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="flex items-center gap-2">
+                <p className="truncate text-sm font-semibold">{s.name}</p>
+                {interviewed.has(s.id) && <Badge tone="success">Interviewed</Badge>}
+              </div>
+              <p className="mt-0.5 truncate text-xs text-muted-foreground">{s.occupation}</p>
+              <div className="mt-3">
+                {revealed ? (
+                  <>
+                    <div className="flex items-center justify-between text-[10px] font-mono">
+                      <span className="uppercase tracking-widest text-muted-foreground">Suspicion</span>
+                      <Badge tone={meta.tone}>{meta.label}</Badge>
+                    </div>
+                    <div className="mt-1.5 h-1.5 overflow-hidden rounded-full bg-background/60">
+                      <div className={cn("h-full rounded-full transition-all duration-700", meta.bar)} style={{ width: `${sc?.score ?? 0}%` }} />
+                    </div>
+                  </>
+                ) : (
+                  <div className="flex items-center gap-1.5 rounded-md border border-dashed border-border/60 px-2 py-1 text-[10px] font-mono uppercase tracking-widest text-muted-foreground">
+                    <Lock className="h-3 w-3" /> Suspicion hidden
+                  </div>
+                )}
+              </div>
+            </div>
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function SuspectDrawer({
+  suspect,
+  onClose,
+  score,
+  band,
+  revealed,
+  interviewed,
+  onInterview,
+}: {
+  suspect: Suspect | null;
+  onClose: () => void;
+  score: number;
+  band: SuspicionLevel;
+  revealed: boolean;
+  interviewed: boolean;
+  onInterview: (id: string) => void;
+}) {
+  if (!suspect) return null;
+  const meta = suspicionMeta[band];
+  return (
+    <Sheet open={!!suspect} onOpenChange={(o) => !o && onClose()}>
+      <SheetContent side="right" className="w-full overflow-y-auto border-l border-border/70 bg-background/95 backdrop-blur-xl sm:max-w-md">
+        <SheetHeader className="text-left">
+          <div className="flex items-center gap-4">
+            <div className="grid h-16 w-16 place-items-center rounded-2xl border border-border/60 bg-surface font-mono text-lg text-accent">
+              {suspect.initials}
+            </div>
+            <div>
+              <SheetTitle className="text-lg">{suspect.name}</SheetTitle>
+              <p className="text-xs text-muted-foreground">{suspect.occupation}</p>
+            </div>
+          </div>
+        </SheetHeader>
+
+        <div className="mt-6 space-y-5">
+          <div className="rounded-xl border border-border/60 bg-surface p-4">
+            <div className="flex items-center justify-between">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Suspicion meter</p>
+              {revealed ? <Badge tone={meta.tone}>{meta.label}</Badge> : <Badge tone="muted"><Lock className="h-3 w-3" /> Locked</Badge>}
+            </div>
+            <div className="mt-2 h-2 overflow-hidden rounded-full bg-background/60">
+              <div className={cn("h-full rounded-full transition-all duration-700", revealed ? meta.bar : "bg-muted/40")} style={{ width: `${revealed ? score : 8}%` }} />
+            </div>
+          </div>
+
+          <DrawerField label="Relationship" value={suspect.relationship} />
+          <DrawerField label="Alibi" value={suspect.alibi} />
+          <DrawerField label="Motive" value={suspect.motive} />
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Statement</p>
+            <p className="mt-1 rounded-lg border border-border/60 bg-surface p-3 text-sm italic text-foreground/90">{suspect.statement}</p>
+          </div>
+
+          <div>
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Timeline</p>
+            <ol className="mt-2 space-y-3 border-l border-border/60 pl-4">
+              {suspect.timeline.map((t) => (
+                <li key={t.id}>
+                  <div className="flex items-baseline gap-2">
+                    <span className="font-mono text-xs text-accent">{t.time}</span>
+                    <span className="text-sm font-medium">{t.label}</span>
+                  </div>
+                  <p className="text-xs text-muted-foreground">{t.detail}</p>
+                </li>
+              ))}
+            </ol>
+          </div>
+
+          <Button
+            variant={interviewed ? "secondary" : "primary"}
+            onClick={() => onInterview(suspect.id)}
+            disabled={interviewed}
+            className="w-full"
+          >
+            {interviewed ? "Interview complete" : "Conduct interview (+10 XP)"}
+          </Button>
+        </div>
+      </SheetContent>
+    </Sheet>
+  );
+}
+
+function DrawerField({ label, value }: { label: string; value: string }) {
+  return (
+    <div>
+      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className="mt-1 text-sm leading-relaxed text-foreground/90">{value}</p>
+    </div>
+  );
+}
+
+/* ---------- Timeline ---------- */
+
+function TimelinePanel({ timeline, baseIds }: { timeline: ReturnType<typeof useInvestigation>["timeline"]; baseIds: Set<string> }) {
+  return (
+    <ol className="relative mx-auto max-w-2xl space-y-6 border-l-2 border-border/60 pl-6">
+      <AnimatePresence>
+        {timeline.map((t) => {
+          const unlocked = !baseIds.has(t.id);
+          return (
+            <motion.li
+              key={t.id}
+              initial={{ opacity: 0, y: 8 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{ duration: 0.4 }}
+              className="relative"
+            >
+              <span
+                className={cn(
+                  "absolute -left-[33px] top-1 grid h-5 w-5 place-items-center rounded-full border-2",
+                  unlocked ? "border-accent bg-accent/25 shadow-glow" : "border-border bg-background",
+                )}
+              >
+                <span className={cn("h-1.5 w-1.5 rounded-full", unlocked ? "bg-accent" : "bg-muted-foreground/50")} />
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="font-mono text-xs text-accent">{t.time}</span>
+                <p className="text-sm font-semibold">{t.label}</p>
+                {unlocked && <Badge tone="accent">New</Badge>}
+              </div>
+              <p className="mt-1 text-sm text-muted-foreground">{t.detail}</p>
+            </motion.li>
+          );
+        })}
+      </AnimatePresence>
+    </ol>
+  );
+}
+
+/* ---------- Notebook ---------- */
+
+function NotebookPanel({
+  notes,
+  evidence,
+  onTogglePin,
+  onRemove,
+  onUpdate,
+  onAdd,
+}: {
+  notes: ReturnType<typeof useInvestigation>["notebook"];
+  evidence: Evidence[];
+  onTogglePin: (id: string) => void;
+  onRemove: (id: string) => void;
+  onUpdate: (id: string, n: string) => void;
+  onAdd: (n: string) => void;
+}) {
+  const [draft, setDraft] = useState("");
+
+  if (notes.length === 0 && !draft) {
+    return (
+      <div className="space-y-6">
+        <EmptyState
+          icon={NotebookPen}
+          title="Notebook is empty"
+          body="Examine evidence to auto-pin key notes, or jot down your own theories below."
+        />
+        <NoteComposer draft={draft} setDraft={setDraft} onAdd={onAdd} />
+      </div>
+    );
+  }
+
+  const pinned = notes.filter((n) => n.pinned);
+  const others = notes.filter((n) => !n.pinned);
+
+  return (
+    <div className="space-y-6">
+      <NoteComposer draft={draft} setDraft={setDraft} onAdd={onAdd} />
+      {pinned.length > 0 && (
+        <div>
+          <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-accent">Pinned</p>
+          <div className="grid gap-3 md:grid-cols-2">
+            {pinned.map((n) => (
+              <NoteCard key={n.id} note={n} evidence={evidence} onTogglePin={onTogglePin} onRemove={onRemove} onUpdate={onUpdate} />
+            ))}
+          </div>
+        </div>
+      )}
+      {others.length > 0 && (
+        <div>
+          <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Notes</p>
+          <div className="grid gap-3 md:grid-cols-2">
+            {others.map((n) => (
+              <NoteCard key={n.id} note={n} evidence={evidence} onTogglePin={onTogglePin} onRemove={onRemove} onUpdate={onUpdate} />
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function NoteComposer({ draft, setDraft, onAdd }: { draft: string; setDraft: (v: string) => void; onAdd: (n: string) => void }) {
+  return (
+    <div className="rounded-xl border border-border/70 bg-surface p-4">
+      <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">New theory</p>
+      <textarea
+        value={draft}
+        onChange={(e) => setDraft(e.target.value)}
+        placeholder="What if the conductor tripped the CCTV himself…"
+        className="mt-2 h-20 w-full resize-none rounded-md border border-border/60 bg-background/50 p-3 text-sm outline-none focus:border-accent/50"
+      />
+      <div className="mt-2 flex justify-end">
+        <Button
+          size="sm"
+          onClick={() => {
+            if (!draft.trim()) return;
+            onAdd(draft.trim());
+            setDraft("");
+          }}
+        >
+          <Plus className="h-4 w-4" /> Add note
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+function NoteCard({
+  note,
+  evidence,
+  onTogglePin,
+  onRemove,
+  onUpdate,
+}: {
+  note: ReturnType<typeof useInvestigation>["notebook"][number];
+  evidence: Evidence[];
+  onTogglePin: (id: string) => void;
+  onRemove: (id: string) => void;
+  onUpdate: (id: string, n: string) => void;
+}) {
+  const ev = evidence.find((e) => e.id === note.evidenceId);
+  return (
+    <div className={cn("rounded-xl border p-4 transition-colors", note.pinned ? "border-accent/40 bg-surface" : "border-border/60 bg-surface/60")}>
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            {note.custom ? "Personal note" : ev?.label ?? "Note"} · {note.at}
+          </p>
+        </div>
+        <div className="flex items-center gap-1">
+          <button onClick={() => onTogglePin(note.id)} className="rounded p-1 text-muted-foreground hover:text-accent" title={note.pinned ? "Unpin" : "Pin"}>
+            {note.pinned ? <PinOff className="h-3.5 w-3.5" /> : <Pin className="h-3.5 w-3.5" />}
+          </button>
+          <button onClick={() => onRemove(note.id)} className="rounded p-1 text-muted-foreground hover:text-red-400" title="Remove">
+            <Trash2 className="h-3.5 w-3.5" />
+          </button>
+        </div>
+      </div>
+      <textarea
+        value={note.note}
+        onChange={(e) => onUpdate(note.id, e.target.value)}
+        className="mt-2 w-full resize-none rounded-md bg-transparent text-sm leading-relaxed text-foreground/90 outline-none"
+        rows={Math.max(2, Math.ceil(note.note.length / 55))}
+      />
+    </div>
+  );
+}
+
+/* ---------- Forensics ---------- */
+
+function ForensicsPanel({ examined }: { examined: Evidence[] }) {
+  if (examined.length === 0) {
+    return <EmptyState icon={FileText} title="Lab is quiet" body="Collect evidence to view chain-of-custody and forensic notes." />;
+  }
+  return (
+    <div className="grid gap-4 lg:grid-cols-2">
+      {examined.map((e) => (
+        <div key={e.id} className="rounded-xl border border-border/70 bg-surface p-5">
+          <div className="flex items-center gap-2">
+            <Badge tone={importanceTone[e.importance]}>{e.importance}</Badge>
+            <p className="text-sm font-semibold">{e.label}</p>
+          </div>
+          <p className="mt-2 text-xs text-muted-foreground">{e.summary}</p>
+          <div className="mt-4">
+            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Chain of custody</p>
+            <ol className="mt-2 space-y-1.5 text-xs">
+              {e.chainOfCustody.map((step, i) => (
+                <li key={i} className="flex items-center gap-2">
+                  <span className="grid h-4 w-4 place-items-center rounded-full bg-accent/15 font-mono text-[9px] text-accent">{i + 1}</span>
+                  <span className="text-foreground/90">{step}</span>
+                </li>
+              ))}
+            </ol>
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
+
+/* ---------- Accuse ---------- */
+
+function AccusePanel({
+  case: c,
+  scores,
+  revealed,
+  progress,
+}: {
+  case: Case;
+  scores: ReturnType<typeof useInvestigation>["suspicionScores"];
+  revealed: boolean;
+  progress: number;
+}) {
+  const [pick, setPick] = useState<string | null>(null);
+  const [verdict, setVerdict] = useState<null | { correct: boolean; name: string }>(null);
+  const killerId = "sus-02"; // Marcus Hale — cufflink + argument + charcoal coat
+
+  if (verdict) {
+    return (
+      <div className="mx-auto max-w-xl text-center">
+        <div className={cn("mx-auto grid h-16 w-16 place-items-center rounded-full", verdict.correct ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300")}>
+          <Gavel className="h-7 w-7" />
+        </div>
+        <h3 className="mt-4 text-xl font-semibold">{verdict.correct ? "Case closed." : "Wrong call, detective."}</h3>
+        <p className="mt-2 text-sm text-muted-foreground">
+          You accused <span className="font-semibold text-foreground">{verdict.name}</span>.{" "}
+          {verdict.correct ? "Justice served." : "The real killer is still on that train."}
+        </p>
+        <Button variant="secondary" className="mt-6" onClick={() => { setVerdict(null); setPick(null); }}>
+          Review evidence
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mx-auto max-w-4xl">
+      <div className="rounded-xl border border-primary/30 bg-gradient-to-br from-primary/10 to-transparent p-4 text-sm">
+        <div className="flex items-center gap-2">
+          <Lightbulb className="h-4 w-4 text-primary" />
+          <p className="font-semibold">Investigation is {progress}% complete.</p>
+        </div>
+        <p className="mt-1 text-xs text-muted-foreground">
+          {progress < 60
+            ? "You may not have enough to convict. Gather more clues before you accuse."
+            : "You have enough evidence to make an accusation."}
+        </p>
+      </div>
+
+      <div className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+        {c.suspects.map((s) => {
+          const sc = scores[s.id];
+          const meta = sc ? suspicionMeta[sc.band] : suspicionMeta.low;
+          const active = pick === s.id;
+          return (
+            <button
+              key={s.id}
+              onClick={() => setPick(s.id)}
+              className={cn(
+                "rounded-xl border p-4 text-left transition-all",
+                active ? "border-primary bg-primary/10 shadow-glow" : "border-border/70 bg-surface hover:border-accent/40",
+              )}
+            >
+              <div className="flex items-center gap-3">
+                <div className="grid h-12 w-12 place-items-center rounded-xl border border-border/60 bg-background/60 font-mono text-sm text-accent">
+                  {s.initials}
+                </div>
+                <div>
+                  <p className="text-sm font-semibold">{s.name}</p>
+                  <p className="text-xs text-muted-foreground">{s.occupation}</p>
+                </div>
+              </div>
+              {revealed && (
+                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-background/60">
+                  <div className={cn("h-full", meta.bar)} style={{ width: `${sc?.score ?? 0}%` }} />
+                </div>
+              )}
+            </button>
+          );
+        })}
+      </div>
+
+      <div className="mt-6 flex justify-end">
+        <Button
+          variant="primary"
+          disabled={!pick}
+          onClick={() => {
+            const s = c.suspects.find((x) => x.id === pick);
+            if (!s) return;
+            setVerdict({ correct: pick === killerId, name: s.name });
+          }}
+        >
+          <Gavel className="h-4 w-4" /> Submit accusation
+        </Button>
+      </div>
+    </div>
+  );
+}
+
+/* ---------- Empty state ---------- */
+
+function EmptyState({ icon: Icon, title, body }: { icon: typeof Eye; title: string; body: string }) {
+  return (
+    <div className="mx-auto flex max-w-md flex-col items-center gap-3 py-16 text-center">
+      <div className="grid h-14 w-14 place-items-center rounded-2xl border border-border/60 bg-surface text-muted-foreground">
+        <Icon className="h-6 w-6" />
+      </div>
+      <h3 className="text-base font-semibold">{title}</h3>
+      <p className="text-sm text-muted-foreground">{body}</p>
     </div>
   );
 }
