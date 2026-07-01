@@ -1,5 +1,5 @@
 import { createFileRoute, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { ArrowRight, Shield } from "lucide-react";
 import { PageLayout } from "@/components/case-zero/page-layout";
@@ -137,7 +137,3 @@ function Dashboard() {
     </PageLayout>
   );
 }
-
-// Memoised prop stability handled inline; component is a leaf render.
-export { Dashboard };
-export const useOfficeDay = () => useMemo(() => currentSeason.currentDay, []);
