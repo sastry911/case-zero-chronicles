@@ -186,6 +186,7 @@ function InvestigationDesk() {
             xp={inv.xp}
             examinedCount={inv.examined.size}
             totalEvidence={c.evidence.length}
+            objectives={inv.objectives}
             onJumpTab={setOpenTab}
           />
         </div>
