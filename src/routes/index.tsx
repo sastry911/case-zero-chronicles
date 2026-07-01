@@ -57,11 +57,11 @@ function Landing() {
               You're not solving one case — you're building a file. Thirty nights. Thirty crimes. One hand behind all of them.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <LinkButton to="/dashboard" size="lg">
-                Start investigation <ArrowRight className="h-4 w-4" />
+              <LinkButton to="/os" size="lg">
+                Enter the OS <ArrowRight className="h-4 w-4" />
               </LinkButton>
-              <LinkButton to="/season" variant="secondary" size="lg">
-                <Layers className="h-4 w-4" /> View the file
+              <LinkButton to="/dashboard" variant="secondary" size="lg">
+                <Layers className="h-4 w-4" /> Detective's office
               </LinkButton>
             </div>
 
