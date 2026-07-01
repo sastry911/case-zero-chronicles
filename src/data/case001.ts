@@ -295,6 +295,7 @@ export const case001: Case = {
         { id: "t3", time: "23:51", label: "Recording continues", detail: "Audio places her in Car 2 throughout." },
         { id: "t4", time: "00:12", label: "Cooperating with police", detail: "Volunteered her recordings immediately." },
       ],
+      secret: "Reyes quietly confirms she has a second copy of Carter's blueprint annotations. She will publish, with or without a killer named.",
     },
     {
       id: "sus-04",
