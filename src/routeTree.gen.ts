@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SeasonRouteImport } from './routes/season'
 import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as OsRouteImport } from './routes/os'
 import { Route as LoginRouteImport } from './routes/login'
 import { Route as LeaderboardRouteImport } from './routes/leaderboard'
 import { Route as FilesRouteImport } from './routes/files'
@@ -28,6 +29,11 @@ const SeasonRoute = SeasonRouteImport.update({
 const ProfileRoute = ProfileRouteImport.update({
   id: '/profile',
   path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const OsRoute = OsRouteImport.update({
+  id: '/os',
+  path: '/os',
   getParentRoute: () => rootRouteImport,
 } as any)
 const LoginRoute = LoginRouteImport.update({
@@ -79,6 +85,7 @@ export interface FileRoutesByFullPath {
   '/files': typeof FilesRoute
   '/leaderboard': typeof LeaderboardRoute
   '/login': typeof LoginRoute
+  '/os': typeof OsRoute
   '/profile': typeof ProfileRoute
   '/season': typeof SeasonRoute
   '/case/$caseId': typeof CaseCaseIdRoute
@@ -91,6 +98,7 @@ export interface FileRoutesByTo {
   '/files': typeof FilesRoute
   '/leaderboard': typeof LeaderboardRoute
   '/login': typeof LoginRoute
+  '/os': typeof OsRoute
   '/profile': typeof ProfileRoute
   '/season': typeof SeasonRoute
   '/case/$caseId': typeof CaseCaseIdRoute
@@ -104,6 +112,7 @@ export interface FileRoutesById {
   '/files': typeof FilesRoute
   '/leaderboard': typeof LeaderboardRoute
   '/login': typeof LoginRoute
+  '/os': typeof OsRoute
   '/profile': typeof ProfileRoute
   '/season': typeof SeasonRoute
   '/case/$caseId': typeof CaseCaseIdRoute
@@ -118,6 +127,7 @@ export interface FileRouteTypes {
     | '/files'
     | '/leaderboard'
     | '/login'
+    | '/os'
     | '/profile'
     | '/season'
     | '/case/$caseId'
@@ -130,6 +140,7 @@ export interface FileRouteTypes {
     | '/files'
     | '/leaderboard'
     | '/login'
+    | '/os'
     | '/profile'
     | '/season'
     | '/case/$caseId'
@@ -142,6 +153,7 @@ export interface FileRouteTypes {
     | '/files'
     | '/leaderboard'
     | '/login'
+    | '/os'
     | '/profile'
     | '/season'
     | '/case/$caseId'
@@ -155,6 +167,7 @@ export interface RootRouteChildren {
   FilesRoute: typeof FilesRoute
   LeaderboardRoute: typeof LeaderboardRoute
   LoginRoute: typeof LoginRoute
+  OsRoute: typeof OsRoute
   ProfileRoute: typeof ProfileRoute
   SeasonRoute: typeof SeasonRoute
   CaseCaseIdRoute: typeof CaseCaseIdRoute
@@ -174,6 +187,13 @@ declare module '@tanstack/react-router' {
       path: '/profile'
       fullPath: '/profile'
       preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/os': {
+      id: '/os'
+      path: '/os'
+      fullPath: '/os'
+      preLoaderRoute: typeof OsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/login': {
@@ -243,6 +263,7 @@ const rootRouteChildren: RootRouteChildren = {
   FilesRoute: FilesRoute,
   LeaderboardRoute: LeaderboardRoute,
   LoginRoute: LoginRoute,
+  OsRoute: OsRoute,
   ProfileRoute: ProfileRoute,
   SeasonRoute: SeasonRoute,
   CaseCaseIdRoute: CaseCaseIdRoute,
