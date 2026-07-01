@@ -5,6 +5,7 @@ import { Card, CardTitle, CardDescription } from "@/components/case-zero/card";
 import { LinkButton } from "@/components/case-zero/button";
 import { Badge } from "@/components/case-zero/badge";
 import { currentSeason } from "@/data/season";
+import { todaysCase } from "@/lib/mock-data";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -50,26 +51,26 @@ function Landing() {
             <h1 className="text-balance font-display text-5xl font-bold leading-[1.05] tracking-tight sm:text-6xl lg:text-7xl">
               <span className="block text-foreground">CASE ZERO</span>
               <span className="mt-4 block text-2xl font-light text-muted-foreground sm:text-3xl lg:text-4xl">
-                Every night. <span className="text-foreground">One murder.</span> <span className="text-primary">One thread pulling them all together.</span>
+                A new murder arrives every day.
               </span>
             </h1>
             <p className="mx-auto mt-8 max-w-xl text-balance text-base text-muted-foreground sm:text-lg">
-              You're not solving one case — you're building a file. Thirty nights. Thirty crimes. One hand behind all of them.
+              Investigate the crime scene. Collect evidence. Question suspects. Solve today's mystery.
             </p>
             <div className="mt-10 flex flex-col items-center justify-center gap-3 sm:flex-row">
-              <LinkButton to="/os" size="lg">
-                Enter the OS <ArrowRight className="h-4 w-4" />
+              <LinkButton to="/dashboard" size="lg">
+                Open Case File <ArrowRight className="h-4 w-4" />
               </LinkButton>
-              <LinkButton to="/dashboard" variant="secondary" size="lg">
-                <Layers className="h-4 w-4" /> Detective's office
+              <LinkButton to="/os" variant="secondary" size="lg">
+                <Layers className="h-4 w-4" /> Enter Headquarters
               </LinkButton>
             </div>
 
             <div className="mx-auto mt-14 grid max-w-2xl grid-cols-3 gap-4 text-center">
               {[
                 { value: `${currentSeason.currentDay}/${currentSeason.totalDays}`, label: "Nights on file" },
-                { value: currentSeason.sharedClues.length.toString(), label: "Threads collected" },
-                { value: currentSeason.masterminStatus, label: "Mastermind" },
+                { value: `${todaysCase.estimatedMinutes} min`, label: "Est. solve time" },
+                { value: todaysCase.number, label: "Today's dispatch" },
               ].map((s) => (
                 <div key={s.label} className="rounded-lg border border-border/60 bg-surface/50 px-3 py-4 backdrop-blur">
                   <div className="font-mono text-2xl font-semibold text-accent">{s.value}</div>
@@ -91,8 +92,7 @@ function Landing() {
             </h2>
           </div>
           <p className="max-w-md text-sm text-muted-foreground">
-            Every case follows the same rigor real detectives use — and gives you only fifteen minutes
-            to crack it.
+            Fifteen minutes. One chance. Make it count.
           </p>
         </div>
 
@@ -125,7 +125,7 @@ function Landing() {
                 The next case is already waiting.
               </h3>
               <p className="mt-3 text-muted-foreground">
-                Sign in, sharpen your instincts, and climb the global leaderboard.
+                Sharpen your instincts. Climb the leaderboard.
               </p>
             </div>
             <div className="flex flex-wrap gap-3">
