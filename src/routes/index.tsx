@@ -69,8 +69,8 @@ function Landing() {
             <div className="mx-auto mt-14 grid max-w-2xl grid-cols-3 gap-4 text-center">
               {[
                 { value: `${currentSeason.currentDay}/${currentSeason.totalDays}`, label: "Nights on file" },
-                { value: currentSeason.sharedClues.length.toString(), label: "Threads collected" },
-                { value: currentSeason.masterminStatus, label: "Mastermind" },
+                { value: `${todaysCase.estimatedMinutes} min`, label: "Est. solve time" },
+                { value: todaysCase.number, label: "Today's dispatch" },
               ].map((s) => (
                 <div key={s.label} className="rounded-lg border border-border/60 bg-surface/50 px-3 py-4 backdrop-blur">
                   <div className="font-mono text-2xl font-semibold text-accent">{s.value}</div>
