@@ -120,16 +120,17 @@ const suspicionMeta: Record<SuspicionLevel, { label: string; bar: string; tone: 
   prime: { label: "Prime", bar: "bg-primary", tone: "primary" },
 };
 
-type DockTab = "evidence" | "suspects" | "timeline" | "notebook" | "forensics" | "accuse";
+type DockTab = "evidence" | "suspects" | "timeline" | "table" | "forensics" | "accuse";
 
 const DOCK_TABS: { id: DockTab; label: string; icon: typeof Eye }[] = [
   { id: "evidence", label: "Evidence", icon: Fingerprint },
   { id: "suspects", label: "Suspects", icon: Users },
   { id: "timeline", label: "Timeline", icon: ScanSearch },
-  { id: "notebook", label: "Notebook", icon: NotebookPen },
+  { id: "table", label: "Evidence Table", icon: NotebookPen },
   { id: "forensics", label: "Forensics", icon: FileText },
   { id: "accuse", label: "Accuse", icon: Gavel },
 ];
+
 
 const SUSPICION_REVEAL_THRESHOLD = 3;
 
