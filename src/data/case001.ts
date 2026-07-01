@@ -166,6 +166,7 @@ export const case001: Case = {
       suspicionImpact: { "sus-01": 8, "sus-02": 10, "sus-04": 4 },
       notebookNote: "Okafor saw two passengers arguing near the rear door at 23:51.",
       timelineUnlock: { id: "tu-02", time: "23:51", label: "Argument observed", detail: "Conductor reports raised voices in Car 7." },
+      forensicReport: "Deposition cross-checked against Okafor's radio log. The 'woman in a green scarf' detail conflicts with the tunnel-light audit — that stretch of Car 7 was too dark to read colour. Testimony downgraded.",
     },
     {
       id: "ev-03",
