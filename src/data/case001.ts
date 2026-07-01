@@ -276,6 +276,7 @@ export const case001: Case = {
         { id: "t3", time: "23:51", label: "Seen near Car 7 vestibule", detail: "Matches conductor's 'tall man in charcoal coat' description." },
         { id: "t4", time: "00:09", label: "Returned to Car 6", detail: "Observed by another passenger, breathing heavily." },
       ],
+      secret: "When pressed, Hale's story cracks — he admits he boarded the 23:47 specifically because he knew Carter's Monday commute. He denies the killing. He denies the cufflink. He does not deny watching her.",
     },
     {
       id: "sus-03",
