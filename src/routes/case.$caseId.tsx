@@ -918,6 +918,20 @@ function SuspectDrawer({
             <p className="mt-1 rounded-lg border border-border/60 bg-surface p-3 text-sm italic text-foreground/90">{suspect.statement}</p>
           </div>
 
+          {suspect.secret && (
+            <div className={cn(
+              "rounded-lg border p-3 transition-colors",
+              interviewed ? "border-primary/40 bg-primary/10" : "border-border/60 bg-background/40",
+            )}>
+              <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-primary">
+                {interviewed ? <><Eye className="h-3 w-3" /> Secret uncovered</> : <><Lock className="h-3 w-3" /> Interview to reveal</>}
+              </p>
+              <p className={cn("mt-1.5 text-sm leading-relaxed", interviewed ? "text-foreground/95" : "select-none text-muted-foreground/40 blur-sm")}>
+                {suspect.secret}
+              </p>
+            </div>
+          )}
+
           <div>
             <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Timeline</p>
             <ol className="mt-2 space-y-3 border-l border-border/60 pl-4">
