@@ -314,6 +314,7 @@ export const case001: Case = {
         { id: "t3", time: "23:51", label: "Witnessed argument in Car 7", detail: "Describes a man and a woman near the rear door." },
         { id: "t4", time: "00:08", label: "Reports body", detail: "Calls it in from the conductor's intercom." },
       ],
+      secret: "Okafor confesses: he was paid ₹40,000 that morning to kill the Car 7 feed for six minutes. He didn't know why. He didn't ask.",
     },
     {
       id: "sus-05",
