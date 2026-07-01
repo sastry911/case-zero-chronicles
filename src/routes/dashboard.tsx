@@ -39,7 +39,7 @@ function Dashboard() {
     if (accepting) return;
     setAccepting(true);
     setTimeout(() => {
-      navigate({ to: "/case/$caseId", params: { caseId: todaysCase.id } });
+      navigate({ to: "/os" });
     }, reduce ? 200 : 1100);
   };
 
