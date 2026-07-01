@@ -1,5 +1,7 @@
 import { createFileRoute, Link, notFound } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useStory, getReturningCastForCase } from "@/lib/story-engine";
+import { getRecurringClue } from "@/data/story";
 import { motion, AnimatePresence } from "@/components/case-zero/motion";
 import {
   ArrowLeft,
