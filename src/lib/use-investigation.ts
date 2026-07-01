@@ -18,12 +18,15 @@ export interface Verdict {
   killerId: string;
   weaponId: string;
   motiveId: string;
+  primaryEvidenceId: string;
   correctKiller: boolean;
   correctWeapon: boolean;
   correctMotive: boolean;
+  correctPrimary: boolean;
   killerName: string;
   weaponLabel: string;
   motiveLabel: string;
+  primaryEvidenceLabel: string;
   evidenceScore: number;
   totalScore: number;
   maxScore: number;
