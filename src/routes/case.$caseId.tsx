@@ -240,11 +240,21 @@ function InvestigationDesk() {
       </FocusSheet>
 
       <FocusSheet open={openTab === "forensics"} title="Forensics Lab" subtitle="Chain of custody & lab notes" onClose={() => setOpenTab(null)}>
-        <ForensicsPanel examined={examinedEvidence} />
+        <ForensicsPanel examined={examinedEvidence} readIds={inv.forensicsRead} onRead={inv.readForensic} />
       </FocusSheet>
 
-      <FocusSheet open={openTab === "accuse"} title="Make an Accusation" subtitle="You get one chance. Choose carefully." onClose={() => setOpenTab(null)}>
-        <AccusePanel case={c} scores={inv.suspicionScores} revealed={suspicionRevealed} progress={inv.progress} />
+      <FocusSheet open={openTab === "accuse"} title="Case Reconstruction" subtitle="Name the killer, weapon and motive. Every pick is scored." onClose={() => setOpenTab(null)}>
+        <AccusePanel
+          case={c}
+          scores={inv.suspicionScores}
+          revealed={suspicionRevealed}
+          progress={inv.progress}
+          verdict={inv.verdict}
+          submitVerdict={inv.submitVerdict}
+          resetInvestigation={inv.resetInvestigation}
+          examined={inv.examined}
+          important={inv.important}
+        />
       </FocusSheet>
 
       {/* Evidence detail modal */}
