@@ -344,7 +344,44 @@ export const case001: Case = {
     { id: "b2", time: "23:47", label: "Train departs", detail: "Doors close. No further entries or exits until 00:12." },
     { id: "b3", time: "00:12", label: "Body discovered", detail: "Conductor finds Emily Carter slumped against the rear vestibule." },
   ],
+  weaponOptions: [
+    { id: "w-torch", label: "Weighted maglite", detail: "Heavy service torch. Standard metro staff issue." },
+    { id: "w-wrench", label: "Vestibule wrench", detail: "Kept in the rear-door emergency locker." },
+    { id: "w-bookend", label: "Brass bookend", detail: "From the victim's satchel — a gift from her studio." },
+    { id: "w-umbrella", label: "Umbrella handle", detail: "Solid teak. Belonged to a passenger." },
+  ],
+  motiveOptions: [
+    { id: "m-revenge", label: "Career revenge", detail: "A public humiliation, two years unpaid." },
+    { id: "m-contract", label: "Contract cover-up", detail: "Silence Carter before she went public." },
+    { id: "m-debts", label: "Paid to silence", detail: "Gambling debts, a quiet envelope." },
+    { id: "m-faith", label: "Personal faith", detail: "A confessor turned zealot." },
+  ],
+  objectives: [
+    { id: "obj-hotspots", label: "Sweep every hotspot on the scene", kind: "hotspots" },
+    { id: "obj-evidence", label: "Collect all six pieces of evidence", kind: "evidence" },
+    { id: "obj-suspects", label: "Interview all five passengers", kind: "suspects" },
+    { id: "obj-timeline", label: "Reconstruct the full timeline", kind: "timeline" },
+    { id: "obj-forensics", label: "Read every forensic report", kind: "forensics" },
+    { id: "obj-notebook", label: "Pin at least three deductions", kind: "notebook", target: 3 },
+  ],
+  solution: {
+    killerId: "sus-02",
+    weaponId: "w-bookend",
+    motiveId: "m-revenge",
+    keyEvidenceIds: ["ev-06", "ev-02", "ev-04", "ev-01"],
+    reconstruction: [
+      { time: "23:44", label: "The warning", detail: "Carter, sensing she is being followed, messages Sister Aune and hands off the folder at the platform." },
+      { time: "23:47", label: "Departure", detail: "The 23:47 leaves platform 3. Hale is already aboard in Car 6, waiting." },
+      { time: "23:49", label: "Cameras die", detail: "Okafor kills the Car 7 feed for an unrelated bribe — accidentally handing Hale the cover he needed." },
+      { time: "23:51", label: "The confrontation", detail: "Hale slips into Car 7, punches a fresh ticket, and corners Carter at the vestibule. Voice raised — the conductor hears it and moves on." },
+      { time: "23:52", label: "The blow", detail: "Hale swings the brass bookend from Carter's own satchel. One strike. He tears the signature panel from the blueprint and vanishes back to Car 6." },
+      { time: "00:12", label: "Discovery", detail: "The lights come up at the tunnel exit. Okafor finds the body. Carter's folder is already safe with Aune." },
+    ],
+    epilogue:
+      "Marcus Hale killed Emily Carter for a career she took from him two years earlier. The bookend was a small cruelty — Carter had gifted it to the studio the year she promoted him, and then, a year later, fired him with it on the shelf behind her.",
+  },
 };
+
 
 export const allCases: Case[] = [case001];
 
