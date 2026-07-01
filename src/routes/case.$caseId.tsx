@@ -1347,7 +1347,7 @@ function AccusePanel({
   );
 }
 
-function ChoiceGrid({ options, value, onSelect }: { options: { id: string; label: string; description: string }[]; value: string | null; onSelect: (id: string) => void }) {
+function ChoiceGrid({ options, value, onSelect }: { options: { id: string; label: string; detail?: string }[]; value: string | null; onSelect: (id: string) => void }) {
   return (
     <div className="grid gap-3 md:grid-cols-2">
       {options.map((o) => {
@@ -1362,7 +1362,7 @@ function ChoiceGrid({ options, value, onSelect }: { options: { id: string; label
             )}
           >
             <p className="text-sm font-semibold">{o.label}</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{o.description}</p>
+            {o.detail && <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{o.detail}</p>}
           </button>
         );
       })}
