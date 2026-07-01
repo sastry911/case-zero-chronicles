@@ -1,6 +1,6 @@
 import { Link } from "@tanstack/react-router";
 import { useState } from "react";
-import { Fingerprint, Github, Twitter, Instagram, Info, Sparkles, X } from "lucide-react";
+import { Fingerprint, Github, Twitter, Instagram, Info, Clock, X } from "lucide-react";
 import { todaysCase } from "@/lib/mock-data";
 import {
   Dialog,
@@ -160,7 +160,7 @@ function AboutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
             <DialogHeader className="space-y-1 text-left">
               <DialogTitle className="text-2xl font-semibold tracking-tight">About Case Zero</DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground">
-                A daily detective game with a monthly through-line.
+                A daily detective experience.
               </DialogDescription>
             </DialogHeader>
           </div>
@@ -179,8 +179,8 @@ function AboutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
               body="One murder per day. Sift evidence, question suspects, close the case before the clock runs out."
             />
             <AboutTile
-              title="Monthly Files"
-              body="Thirty daily cases stitch into one seasonal File. A single mastermind hides behind them all."
+              title="Evidence-driven"
+              body="Every clue matters. Examine the scene, connect the dots, and build your case with precision."
             />
             <AboutTile
               title="Community rankings"
@@ -188,9 +188,9 @@ function AboutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: 
             />
           </div>
 
-          <div className="flex items-center gap-2 rounded-lg border border-accent/30 bg-accent/5 p-3 text-xs text-accent">
-            <Sparkles className="h-3.5 w-3.5" />
-            You're currently investigating <span className="font-semibold text-foreground">FILE 001 — The Crimson Thread</span>.
+          <div className="flex items-center gap-2 rounded-lg border border-primary/30 bg-primary/5 p-3 text-xs text-primary">
+            <Clock className="h-3.5 w-3.5" />
+            A new case drops at midnight. Your briefing will be ready.
           </div>
         </div>
       </DialogContent>
