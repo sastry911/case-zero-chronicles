@@ -1,5 +1,5 @@
-import { useCallback, useSyncExternalStore } from "react";
-import type { Case, Evidence } from "@/data/case001";
+import { useCallback, useMemo, useSyncExternalStore } from "react";
+import type { Case, CaseObjective, Evidence } from "@/data/case001";
 import { suspicionBand, type SuspicionLevel } from "@/data/case001";
 import { ui } from "./ui-store";
 
@@ -10,6 +10,25 @@ interface NotebookNote {
   at: string;
   pinned: boolean;
   custom: boolean;
+  suspicious?: boolean;
+  group?: string;
+}
+
+export interface Verdict {
+  killerId: string;
+  weaponId: string;
+  motiveId: string;
+  correctKiller: boolean;
+  correctWeapon: boolean;
+  correctMotive: boolean;
+  killerName: string;
+  weaponLabel: string;
+  motiveLabel: string;
+  evidenceScore: number;
+  totalScore: number;
+  maxScore: number;
+  grade: string;
+  submittedAt: number;
 }
 
 interface InvestigationState {
@@ -17,11 +36,13 @@ interface InvestigationState {
   investigatedHotspots: Set<string>;
   interviewedSuspects: Set<string>;
   importantEvidence: Set<string>;
+  forensicsRead: Set<string>;
   notebook: NotebookNote[];
   xp: number;
   intuition: number;
   unlockedAchievements: Set<string>;
-  compareSet: string[]; // up to 2 evidence ids
+  compareSet: string[];
+  verdict: Verdict | null;
 }
 
 const initial = (): InvestigationState => ({
@@ -29,12 +50,57 @@ const initial = (): InvestigationState => ({
   investigatedHotspots: new Set(),
   interviewedSuspects: new Set(),
   importantEvidence: new Set(),
+  forensicsRead: new Set(),
   notebook: [],
   xp: 0,
   intuition: 0,
   unlockedAchievements: new Set(),
   compareSet: [],
+  verdict: null,
 });
+
+const STORAGE_PREFIX = "case-zero:inv:";
+const STORAGE_VERSION = 2;
+
+function serialize(state: InvestigationState) {
+  return JSON.stringify({
+    v: STORAGE_VERSION,
+    examinedEvidence: [...state.examinedEvidence],
+    investigatedHotspots: [...state.investigatedHotspots],
+    interviewedSuspects: [...state.interviewedSuspects],
+    importantEvidence: [...state.importantEvidence],
+    forensicsRead: [...state.forensicsRead],
+    notebook: state.notebook,
+    xp: state.xp,
+    intuition: state.intuition,
+    unlockedAchievements: [...state.unlockedAchievements],
+    compareSet: state.compareSet,
+    verdict: state.verdict,
+  });
+}
+
+function deserialize(raw: string | null): InvestigationState | null {
+  if (!raw) return null;
+  try {
+    const p = JSON.parse(raw);
+    if (p?.v !== STORAGE_VERSION) return null;
+    return {
+      examinedEvidence: new Set<string>(p.examinedEvidence ?? []),
+      investigatedHotspots: new Set<string>(p.investigatedHotspots ?? []),
+      interviewedSuspects: new Set<string>(p.interviewedSuspects ?? []),
+      importantEvidence: new Set<string>(p.importantEvidence ?? []),
+      forensicsRead: new Set<string>(p.forensicsRead ?? []),
+      notebook: p.notebook ?? [],
+      xp: p.xp ?? 0,
+      intuition: p.intuition ?? 0,
+      unlockedAchievements: new Set<string>(p.unlockedAchievements ?? []),
+      compareSet: p.compareSet ?? [],
+      verdict: p.verdict ?? null,
+    };
+  } catch {
+    return null;
+  }
+}
 
 const stores = new Map<string, Store>();
 
@@ -44,12 +110,16 @@ const ACHIEVEMENTS = [
   { id: "interrogator", label: "Interrogator", detail: "Interviewed every suspect", test: (s: InvestigationState, c: Case) => s.interviewedSuspects.size >= c.suspects.length },
   { id: "master_observer", label: "Master Observer", detail: "Examined every object", test: (s: InvestigationState, c: Case) => s.examinedEvidence.size >= c.evidence.length },
   { id: "intuition_unlocked", label: "Detective Intuition", detail: "Intuition fully charged", test: (s: InvestigationState) => s.intuition >= 100 },
+  { id: "lab_rat", label: "Lab Rat", detail: "Read every forensic report", test: (s: InvestigationState, c: Case) => s.forensicsRead.size >= c.evidence.filter(e => e.forensicReport).length && c.evidence.some(e => e.forensicReport) },
 ] as const;
 
 class Store {
-  private state: InvestigationState = initial();
+  private state: InvestigationState;
   private listeners = new Set<() => void>();
-  constructor(private caseRef: Case) {}
+  constructor(private caseRef: Case) {
+    const restored = typeof window !== "undefined" ? deserialize(window.localStorage.getItem(STORAGE_PREFIX + caseRef.id)) : null;
+    this.state = restored ?? initial();
+  }
 
   subscribe = (l: () => void) => {
     this.listeners.add(l);
@@ -57,8 +127,14 @@ class Store {
   };
   getSnapshot = () => this.state;
 
+  private persist() {
+    if (typeof window === "undefined") return;
+    try { window.localStorage.setItem(STORAGE_PREFIX + this.caseRef.id, serialize(this.state)); } catch { /* quota */ }
+  }
+
   private emit() {
     this.state = { ...this.state };
+    this.persist();
     this.listeners.forEach((l) => l());
     this.checkAchievements();
   }
@@ -69,6 +145,7 @@ class Store {
       if (a.test(this.state, this.caseRef)) {
         this.state.unlockedAchievements = new Set(this.state.unlockedAchievements).add(a.id);
         ui.unlockAchievement({ id: a.id, label: a.label, detail: a.detail });
+        this.persist();
       }
     }
   }
@@ -112,6 +189,13 @@ class Store {
     this.emit();
   }
 
+  readForensic(evId: string) {
+    if (this.state.forensicsRead.has(evId)) return;
+    this.state.forensicsRead = new Set(this.state.forensicsRead).add(evId);
+    this.state.xp += 5;
+    this.emit();
+  }
+
   toggleImportant(id: string) {
     const next = new Set(this.state.importantEvidence);
     if (next.has(id)) next.delete(id);
@@ -123,6 +207,20 @@ class Store {
   togglePin(noteId: string) {
     this.state.notebook = this.state.notebook.map((n) =>
       n.id === noteId ? { ...n, pinned: !n.pinned } : n,
+    );
+    this.emit();
+  }
+
+  toggleSuspicious(noteId: string) {
+    this.state.notebook = this.state.notebook.map((n) =>
+      n.id === noteId ? { ...n, suspicious: !n.suspicious } : n,
+    );
+    this.emit();
+  }
+
+  setGroup(noteId: string, group: string) {
+    this.state.notebook = this.state.notebook.map((n) =>
+      n.id === noteId ? { ...n, group: group || undefined } : n,
     );
     this.emit();
   }
@@ -170,6 +268,67 @@ class Store {
     this.state.compareSet = [];
     this.emit();
   }
+
+  submitVerdict(killerId: string, weaponId: string, motiveId: string): Verdict {
+    const sol = this.caseRef.solution;
+    const correctKiller = killerId === sol.killerId;
+    const correctWeapon = weaponId === sol.weaponId;
+    const correctMotive = motiveId === sol.motiveId;
+
+    // Evidence score: proportion of key evidence examined + bonus for pinning them.
+    const keyExamined = sol.keyEvidenceIds.filter(id => this.state.examinedEvidence.has(id)).length;
+    const keyPinned = sol.keyEvidenceIds.filter(id => this.state.importantEvidence.has(id) || this.state.notebook.some(n => n.evidenceId === id && n.pinned)).length;
+    const evidenceRatio = sol.keyEvidenceIds.length === 0 ? 1 : (keyExamined + keyPinned * 0.5) / (sol.keyEvidenceIds.length * 1.5);
+    const evidenceScore = Math.round(evidenceRatio * 40); // /40
+
+    // Points: killer 40, weapon 15, motive 15, evidence 40, minus red herrings pinned
+    const redHerringsPinned = this.caseRef.evidence.filter(e => e.redHerring && (this.state.importantEvidence.has(e.id))).length;
+    let total =
+      (correctKiller ? 40 : 0) +
+      (correctWeapon ? 15 : 0) +
+      (correctMotive ? 15 : 0) +
+      evidenceScore -
+      redHerringsPinned * 5;
+    total = Math.max(0, Math.min(110, total));
+    const maxScore = 110;
+
+    let grade = "F";
+    if (correctKiller) {
+      if (total >= 95) grade = "S";
+      else if (total >= 80) grade = "A";
+      else if (total >= 65) grade = "B";
+      else if (total >= 50) grade = "C";
+      else grade = "D";
+    }
+
+    const killer = this.caseRef.suspects.find(s => s.id === killerId);
+    const weapon = this.caseRef.weaponOptions.find(w => w.id === weaponId);
+    const motive = this.caseRef.motiveOptions.find(m => m.id === motiveId);
+
+    const verdict: Verdict = {
+      killerId, weaponId, motiveId,
+      correctKiller, correctWeapon, correctMotive,
+      killerName: killer?.name ?? "Unknown",
+      weaponLabel: weapon?.label ?? "Unknown",
+      motiveLabel: motive?.label ?? "Unknown",
+      evidenceScore,
+      totalScore: total,
+      maxScore,
+      grade,
+      submittedAt: Date.now(),
+    };
+    this.state.verdict = verdict;
+    this.state.xp += total;
+    ui.spawnXp(total);
+    this.emit();
+    return verdict;
+  }
+
+  resetInvestigation() {
+    this.state = initial();
+    this.persist();
+    this.listeners.forEach((l) => l());
+  }
 }
 
 function getStore(c: Case) {
@@ -185,6 +344,13 @@ export interface SuspectScore {
   id: string;
   score: number;
   band: SuspicionLevel;
+}
+
+export interface ObjectiveProgress {
+  objective: CaseObjective;
+  current: number;
+  total: number;
+  complete: boolean;
 }
 
 export function useInvestigation(c: Case) {
@@ -214,28 +380,49 @@ export function useInvestigation(c: Case) {
   }
   timeline.sort((a, b) => a.time.localeCompare(b.time));
 
+  const objectives: ObjectiveProgress[] = useMemo(() => c.objectives.map((o) => {
+    let current = 0, target = 0;
+    switch (o.kind) {
+      case "hotspots": target = o.target ?? c.hotspots.length; current = state.investigatedHotspots.size; break;
+      case "evidence": target = o.target ?? c.evidence.length; current = state.examinedEvidence.size; break;
+      case "suspects": target = o.target ?? c.suspects.length; current = state.interviewedSuspects.size; break;
+      case "timeline": target = o.target ?? (c.baseTimeline.length + c.evidence.filter(e => e.timelineUnlock).length); current = timeline.length; break;
+      case "forensics": target = o.target ?? c.evidence.filter(e => e.forensicReport).length; current = state.forensicsRead.size; break;
+      case "notebook": target = o.target ?? 3; current = state.notebook.filter(n => n.pinned).length; break;
+    }
+    return { objective: o, current: Math.min(current, target), total: target, complete: current >= target };
+  }), [c, state.investigatedHotspots, state.examinedEvidence, state.interviewedSuspects, state.forensicsRead, state.notebook, timeline.length]);
+
   return {
     examined: state.examinedEvidence,
     investigated: state.investigatedHotspots,
     interviewed: state.interviewedSuspects,
     important: state.importantEvidence,
+    forensicsRead: state.forensicsRead,
     notebook: state.notebook,
     xp: state.xp,
     intuition: state.intuition,
     achievements: state.unlockedAchievements,
     compareSet: state.compareSet,
+    verdict: state.verdict,
     suspicionScores,
     progress,
     timeline,
+    objectives,
     examineEvidence: useCallback((e: Evidence, x?: number, y?: number) => store.examineEvidence(e, x, y), [store]),
     investigateHotspot: useCallback((id: string, x?: number, y?: number) => store.investigateHotspot(id, x, y), [store]),
     interviewSuspect: useCallback((id: string) => store.interviewSuspect(id), [store]),
+    readForensic: useCallback((id: string) => store.readForensic(id), [store]),
     toggleImportant: useCallback((id: string) => store.toggleImportant(id), [store]),
     togglePin: useCallback((id: string) => store.togglePin(id), [store]),
+    toggleSuspicious: useCallback((id: string) => store.toggleSuspicious(id), [store]),
+    setGroup: useCallback((id: string, g: string) => store.setGroup(id, g), [store]),
     removeNote: useCallback((id: string) => store.removeNote(id), [store]),
     updateNote: useCallback((id: string, n: string) => store.updateNote(id, n), [store]),
     addCustomNote: useCallback((n: string) => store.addCustomNote(n), [store]),
     toggleCompare: useCallback((id: string) => store.toggleCompare(id), [store]),
     clearCompare: useCallback(() => store.clearCompare(), [store]),
+    submitVerdict: useCallback((k: string, w: string, m: string) => store.submitVerdict(k, w, m), [store]),
+    resetInvestigation: useCallback(() => store.resetInvestigation(), [store]),
   };
 }
