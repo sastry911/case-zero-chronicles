@@ -286,5 +286,3 @@ function SharedClueCard({ clue }: { clue: SharedClue }) {
   );
 }
 
-// keep unused import warnings quiet without importing extra icons
-export { Ghost as _unused, DifficultyStars as _unusedDiff };
