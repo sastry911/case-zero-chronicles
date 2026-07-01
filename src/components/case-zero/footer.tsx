@@ -138,29 +138,6 @@ export function Footer() {
   );
 }
 
-function ComingSoonTextLink({ label }: { label: string }) {
-  return (
-    <TooltipProvider delayDuration={150}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            aria-disabled="true"
-            className="inline-flex cursor-not-allowed items-center gap-1.5 text-muted-foreground/70"
-          >
-            {label}
-            <span className="rounded-full border border-accent/30 bg-accent/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-widest text-accent">
-              Soon
-            </span>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="text-xs">
-          Coming soon
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
 
 function AboutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   return (
