@@ -1505,23 +1505,50 @@ function ReconstructionView({
         </div>
       </div>
 
-      {/* Recurring clue */}
+      {/* Recurring clue — dynamic per case, revealed on archive */}
       <div className="mt-6 overflow-hidden rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/15 via-surface to-background p-5 shadow-glow">
-        <div className="flex items-center gap-2">
-          <Sparkles className="h-4 w-4 text-primary" />
-          <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Something else was here</p>
+        <div className="flex items-center justify-between gap-2">
+          <div className="flex items-center gap-2">
+            <Sparkles className="h-4 w-4 text-primary" />
+            <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Something else was here</p>
+          </div>
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">
+            Day {currentDay - 1} of {file.totalDays} · {file.number}
+          </p>
         </div>
         <div className="mt-4 flex items-start gap-3">
-          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-primary/40 bg-primary/10 font-mono text-sm font-bold text-primary">//</span>
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-primary/40 bg-primary/10 font-mono text-sm font-bold text-primary">
+            {plannedClue.symbol}
+          </span>
           <div className="min-w-0">
-            <p className="text-sm font-semibold">A single crimson silk thread</p>
-            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-              Snagged on the vestibule hinge. It doesn't match Carter's coat, or anything the five passengers were wearing. It shouldn't be here.
+            <p className="text-sm font-semibold">{plannedClue.name}</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{plannedClue.hint}</p>
+            <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-accent">
+              Filed to archive · Meaning unresolved
             </p>
-            <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-accent">Filed to archive · Meaning unresolved</p>
           </div>
         </div>
       </div>
+
+      {/* Returning cast — quietly noted, no explanation */}
+      {cast.length > 0 && (
+        <div className="mt-4 rounded-2xl border border-border/70 bg-surface/60 p-4">
+          <p className="font-mono text-[10px] uppercase tracking-[0.24em] text-muted-foreground">
+            Present at the scene tonight
+          </p>
+          <ul className="mt-2 grid gap-2 sm:grid-cols-2">
+            {cast.map((ch) => (
+              <li key={ch.id} className="flex items-start gap-2 text-xs">
+                <span className="mt-1 h-1.5 w-1.5 rounded-full bg-accent" />
+                <span>
+                  <span className="font-semibold text-foreground">{ch.name}</span>
+                  <span className="text-muted-foreground"> · {ch.role}</span>
+                </span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
 
       <div className="mt-6 flex items-center justify-center gap-3">
         <Button variant="secondary" onClick={onReset}>Reopen investigation</Button>
