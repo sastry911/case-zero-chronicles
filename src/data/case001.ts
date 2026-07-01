@@ -204,6 +204,7 @@ export const case001: Case = {
       suspicionImpact: { "sus-01": 18, "sus-03": -4 },
       notebookNote: "Victim was documenting structural shortcuts approved by Voss.",
       timelineUnlock: { id: "tu-04", time: "23:30", label: "Motive surfaces", detail: "Blueprint reveals Voss as Carter's target." },
+      forensicReport: "Paper analysis: the missing signature panel was torn, not cut. Fibre residue on the tear matches a brass edge — likely the corner of a bookend or heavy office object, not scissors or a blade.",
     },
     {
       id: "ev-05",
