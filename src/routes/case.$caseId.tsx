@@ -186,6 +186,7 @@ function InvestigationDesk() {
             xp={inv.xp}
             examinedCount={inv.examined.size}
             totalEvidence={c.evidence.length}
+            objectives={inv.objectives}
             onJumpTab={setOpenTab}
           />
         </div>
@@ -240,11 +241,21 @@ function InvestigationDesk() {
       </FocusSheet>
 
       <FocusSheet open={openTab === "forensics"} title="Forensics Lab" subtitle="Chain of custody & lab notes" onClose={() => setOpenTab(null)}>
-        <ForensicsPanel examined={examinedEvidence} />
+        <ForensicsPanel examined={examinedEvidence} readIds={inv.forensicsRead} onRead={inv.readForensic} />
       </FocusSheet>
 
-      <FocusSheet open={openTab === "accuse"} title="Make an Accusation" subtitle="You get one chance. Choose carefully." onClose={() => setOpenTab(null)}>
-        <AccusePanel case={c} scores={inv.suspicionScores} revealed={suspicionRevealed} progress={inv.progress} />
+      <FocusSheet open={openTab === "accuse"} title="Case Reconstruction" subtitle="Name the killer, weapon and motive. Every pick is scored." onClose={() => setOpenTab(null)}>
+        <AccusePanel
+          case={c}
+          scores={inv.suspicionScores}
+          revealed={suspicionRevealed}
+          progress={inv.progress}
+          verdict={inv.verdict}
+          submitVerdict={inv.submitVerdict}
+          resetInvestigation={inv.resetInvestigation}
+          examined={inv.examined}
+          important={inv.important}
+        />
       </FocusSheet>
 
       {/* Evidence detail modal */}
@@ -296,6 +307,10 @@ function InvestigationDesk() {
               <BriefRow label="Date" value={c.date} />
             </div>
             <p className="leading-relaxed text-muted-foreground">{c.briefing}</p>
+            <div className="rounded-lg border border-border/60 bg-background/40 p-4">
+              <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-accent">Objectives</p>
+              <ObjectivesList objectives={inv.objectives} compact />
+            </div>
           </div>
         </DialogContent>
       </Dialog>
@@ -429,6 +444,7 @@ function SceneSideRail({
   xp,
   examinedCount,
   totalEvidence,
+  objectives,
   onJumpTab,
 }: {
   case: Case;
@@ -437,6 +453,7 @@ function SceneSideRail({
   xp: number;
   examinedCount: number;
   totalEvidence: number;
+  objectives: ReturnType<typeof useInvestigation>["objectives"];
   onJumpTab: (t: DockTab) => void;
 }) {
   return (
@@ -462,6 +479,19 @@ function SceneSideRail({
         <div className="mt-4 grid grid-cols-2 gap-3 text-center">
           <StatMini label="Evidence" value={`${examinedCount}/${totalEvidence}`} />
           <StatMini label="XP" value={<AnimatedNumber value={xp} />} accent />
+        </div>
+      </div>
+
+      {/* Objectives */}
+      <div className="rounded-2xl border border-border/70 bg-surface p-5">
+        <div className="flex items-center justify-between">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Objectives</p>
+          <span className="font-mono text-[10px] text-accent">
+            {objectives.filter(o => o.complete).length}/{objectives.length}
+          </span>
+        </div>
+        <div className="mt-3">
+          <ObjectivesList objectives={objectives} />
         </div>
       </div>
 
@@ -494,11 +524,32 @@ function SceneSideRail({
       >
         <div>
           <p className="font-mono text-[10px] uppercase tracking-widest text-primary">Ready?</p>
-          <p className="mt-0.5 text-sm font-semibold">Make Accusation</p>
+          <p className="mt-0.5 text-sm font-semibold">Reconstruct the Case</p>
         </div>
         <Gavel className="h-5 w-5 text-primary transition-transform group-hover:rotate-12" />
       </button>
     </aside>
+  );
+}
+
+function ObjectivesList({ objectives, compact }: { objectives: ReturnType<typeof useInvestigation>["objectives"]; compact?: boolean }) {
+  return (
+    <ul className={cn("space-y-2", compact && "space-y-1.5")}>
+      {objectives.map((o) => (
+        <li key={o.objective.id} className="flex items-center gap-2.5">
+          <span className={cn(
+            "grid h-4 w-4 shrink-0 place-items-center rounded-full border transition-colors",
+            o.complete ? "border-emerald-400/70 bg-emerald-400/20 text-emerald-200" : "border-border/70 bg-background/40 text-muted-foreground",
+          )}>
+            {o.complete ? <Eye className="h-2.5 w-2.5" /> : <span className="h-1 w-1 rounded-full bg-muted-foreground/60" />}
+          </span>
+          <span className={cn("min-w-0 flex-1 truncate text-xs", o.complete ? "text-foreground/70 line-through decoration-emerald-400/40" : "text-foreground/90")}>
+            {o.objective.label}
+          </span>
+          <span className="font-mono text-[10px] text-muted-foreground">{o.current}/{o.total}</span>
+        </li>
+      ))}
+    </ul>
   );
 }
 
@@ -867,6 +918,20 @@ function SuspectDrawer({
             <p className="mt-1 rounded-lg border border-border/60 bg-surface p-3 text-sm italic text-foreground/90">{suspect.statement}</p>
           </div>
 
+          {suspect.secret && (
+            <div className={cn(
+              "rounded-lg border p-3 transition-colors",
+              interviewed ? "border-primary/40 bg-primary/10" : "border-border/60 bg-background/40",
+            )}>
+              <p className="flex items-center gap-2 font-mono text-[10px] uppercase tracking-widest text-primary">
+                {interviewed ? <><Eye className="h-3 w-3" /> Secret uncovered</> : <><Lock className="h-3 w-3" /> Interview to reveal</>}
+              </p>
+              <p className={cn("mt-1.5 text-sm leading-relaxed", interviewed ? "text-foreground/95" : "select-none text-muted-foreground/40 blur-sm")}>
+                {suspect.secret}
+              </p>
+            </div>
+          )}
+
           <div>
             <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Timeline</p>
             <ol className="mt-2 space-y-3 border-l border-border/60 pl-4">
@@ -1074,101 +1139,110 @@ function NoteCard({
 
 /* ---------- Forensics ---------- */
 
-function ForensicsPanel({ examined }: { examined: Evidence[] }) {
+function ForensicsPanel({
+  examined,
+  readIds,
+  onRead,
+}: {
+  examined: Evidence[];
+  readIds: Set<string>;
+  onRead: (id: string) => void;
+}) {
   if (examined.length === 0) {
     return <EmptyState icon={FileText} title="Lab is quiet" body="Collect evidence to view chain-of-custody and forensic notes." />;
   }
   return (
     <div className="grid gap-4 lg:grid-cols-2">
-      {examined.map((e) => (
-        <div key={e.id} className="rounded-xl border border-border/70 bg-surface p-5">
-          <div className="flex items-center gap-2">
-            <Badge tone={importanceTone[e.importance]}>{e.importance}</Badge>
-            <p className="text-sm font-semibold">{e.label}</p>
+      {examined.map((e) => {
+        const isRead = readIds.has(e.id);
+        return (
+          <div key={e.id} className={cn(
+            "rounded-xl border bg-surface p-5 transition-colors",
+            isRead ? "border-accent/40" : "border-border/70",
+          )}>
+            <div className="flex items-center gap-2">
+              <Badge tone={importanceTone[e.importance]}>{e.importance}</Badge>
+              <p className="text-sm font-semibold">{e.label}</p>
+              {e.redHerring && isRead && <Badge tone="muted">Red herring?</Badge>}
+            </div>
+            <p className="mt-2 text-xs text-muted-foreground">{e.summary}</p>
+
+            <div className="mt-4">
+              <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Chain of custody</p>
+              <ol className="mt-2 space-y-1.5 text-xs">
+                {e.chainOfCustody.map((step, i) => (
+                  <li key={i} className="flex items-center gap-2">
+                    <span className="grid h-4 w-4 place-items-center rounded-full bg-accent/15 font-mono text-[9px] text-accent">{i + 1}</span>
+                    <span className="text-foreground/90">{step}</span>
+                  </li>
+                ))}
+              </ol>
+            </div>
+
+            {e.forensicReport && (
+              <div className="mt-4 rounded-lg border border-border/60 bg-background/50 p-3">
+                <div className="flex items-center justify-between">
+                  <p className="flex items-center gap-1.5 font-mono text-[10px] uppercase tracking-widest text-accent">
+                    <Sparkles className="h-3 w-3" /> Lab report
+                  </p>
+                  {!isRead && (
+                    <button
+                      onClick={() => onRead(e.id)}
+                      className="rounded-md border border-accent/40 bg-accent/10 px-2 py-0.5 font-mono text-[10px] uppercase tracking-widest text-accent transition-colors hover:bg-accent/20"
+                    >
+                      Analyse (+8 XP)
+                    </button>
+                  )}
+                </div>
+                <p className={cn(
+                  "mt-2 text-xs leading-relaxed transition-all",
+                  isRead ? "text-foreground/90" : "select-none text-muted-foreground/40 blur-sm",
+                )}>
+                  {e.forensicReport}
+                </p>
+              </div>
+            )}
           </div>
-          <p className="mt-2 text-xs text-muted-foreground">{e.summary}</p>
-          <div className="mt-4">
-            <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Chain of custody</p>
-            <ol className="mt-2 space-y-1.5 text-xs">
-              {e.chainOfCustody.map((step, i) => (
-                <li key={i} className="flex items-center gap-2">
-                  <span className="grid h-4 w-4 place-items-center rounded-full bg-accent/15 font-mono text-[9px] text-accent">{i + 1}</span>
-                  <span className="text-foreground/90">{step}</span>
-                </li>
-              ))}
-            </ol>
-          </div>
-        </div>
-      ))}
+        );
+      })}
     </div>
   );
 }
 
-/* ---------- Accuse ---------- */
+/* ---------- Accuse / Reconstruction ---------- */
 
 function AccusePanel({
   case: c,
   scores,
   revealed,
   progress,
+  verdict,
+  submitVerdict,
+  resetInvestigation,
+  examined,
+  important,
 }: {
   case: Case;
   scores: ReturnType<typeof useInvestigation>["suspicionScores"];
   revealed: boolean;
   progress: number;
+  verdict: ReturnType<typeof useInvestigation>["verdict"];
+  submitVerdict: ReturnType<typeof useInvestigation>["submitVerdict"];
+  resetInvestigation: ReturnType<typeof useInvestigation>["resetInvestigation"];
+  examined: Set<string>;
+  important: Set<string>;
 }) {
-  const [pick, setPick] = useState<string | null>(null);
-  const [verdict, setVerdict] = useState<null | { correct: boolean; name: string }>(null);
-  const killerId = "sus-02"; // Marcus Hale — cufflink + argument + charcoal coat
+  const [step, setStep] = useState<0 | 1 | 2>(0);
+  const [killer, setKiller] = useState<string | null>(null);
+  const [weapon, setWeapon] = useState<string | null>(null);
+  const [motive, setMotive] = useState<string | null>(null);
 
   if (verdict) {
-    return (
-      <div className="mx-auto max-w-xl text-center">
-        <div className={cn("mx-auto grid h-16 w-16 place-items-center rounded-full", verdict.correct ? "bg-emerald-500/15 text-emerald-300" : "bg-red-500/15 text-red-300")}>
-          <Gavel className="h-7 w-7" />
-        </div>
-        <h3 className="mt-4 text-xl font-semibold">{verdict.correct ? "Case closed." : "Wrong call, detective."}</h3>
-        <p className="mt-2 text-sm text-muted-foreground">
-          You accused <span className="font-semibold text-foreground">{verdict.name}</span>.{" "}
-          {verdict.correct ? "Justice served — but the file is not." : "The real killer is still on that train."}
-        </p>
-
-        {/* Recurring clue reveal */}
-        <div className="mx-auto mt-8 max-w-md overflow-hidden rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/15 via-surface to-background p-5 text-left shadow-glow">
-          <div className="flex items-center gap-2">
-            <Sparkles className="h-4 w-4 text-primary" />
-            <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Something else was here</p>
-          </div>
-          <div className="mt-4 flex items-start gap-3">
-            <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-primary/40 bg-primary/10 font-mono text-sm font-bold text-primary">
-              //
-            </span>
-            <div className="min-w-0">
-              <p className="text-sm font-semibold">A single crimson silk thread</p>
-              <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
-                Snagged on the vestibule hinge. It doesn't match Carter's coat, or anything the five passengers were wearing.
-                It shouldn't be here.
-              </p>
-              <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-accent">Meaning unresolved · Filed to archive</p>
-            </div>
-          </div>
-        </div>
-
-        <div className="mt-6 flex items-center justify-center gap-3">
-          <Button variant="secondary" onClick={() => { setVerdict(null); setPick(null); }}>
-            Review evidence
-          </Button>
-          <a
-            href="/archive"
-            className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:brightness-110"
-          >
-            Open the archive →
-          </a>
-        </div>
-      </div>
-    );
+    return <ReconstructionView case={c} verdict={verdict} examined={examined} important={important} onReset={resetInvestigation} />;
   }
 
+  const stepLabels = ["Killer", "Weapon", "Motive"];
+  const canSubmit = killer && weapon && motive;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -1180,59 +1254,279 @@ function AccusePanel({
         <p className="mt-1 text-xs text-muted-foreground">
           {progress < 60
             ? "You may not have enough to convict. Gather more clues before you accuse."
-            : "You have enough evidence to make an accusation."}
+            : "Reconstruct what happened. Every pick is scored — killer, weapon and motive."}
         </p>
       </div>
 
-      <div className="mt-6 grid gap-3 md:grid-cols-2 lg:grid-cols-3">
-        {c.suspects.map((s) => {
-          const sc = scores[s.id];
-          const meta = sc ? suspicionMeta[sc.band] : suspicionMeta.low;
-          const active = pick === s.id;
-          return (
-            <button
-              key={s.id}
-              onClick={() => setPick(s.id)}
-              className={cn(
-                "rounded-xl border p-4 text-left transition-all",
-                active ? "border-primary bg-primary/10 shadow-glow" : "border-border/70 bg-surface hover:border-accent/40",
-              )}
-            >
-              <div className="flex items-center gap-3">
-                <div className="grid h-12 w-12 place-items-center rounded-xl border border-border/60 bg-background/60 font-mono text-sm text-accent">
-                  {s.initials}
-                </div>
-                <div>
-                  <p className="text-sm font-semibold">{s.name}</p>
-                  <p className="text-xs text-muted-foreground">{s.occupation}</p>
-                </div>
-              </div>
-              {revealed && (
-                <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-background/60">
-                  <div className={cn("h-full", meta.bar)} style={{ width: `${sc?.score ?? 0}%` }} />
-                </div>
-              )}
-            </button>
-          );
-        })}
+      {/* Stepper */}
+      <div className="mt-6 flex items-center gap-2">
+        {stepLabels.map((label, i) => (
+          <div key={label} className="flex flex-1 items-center gap-2">
+            <div className={cn(
+              "grid h-7 w-7 place-items-center rounded-full border font-mono text-xs transition-colors",
+              step === i ? "border-primary bg-primary/20 text-primary" :
+              i < step ? "border-emerald-400/50 bg-emerald-400/10 text-emerald-300" :
+              "border-border/60 bg-surface text-muted-foreground",
+            )}>{i + 1}</div>
+            <p className={cn("text-xs font-semibold", step === i ? "text-foreground" : "text-muted-foreground")}>{label}</p>
+            {i < stepLabels.length - 1 && <div className="h-px flex-1 bg-border/60" />}
+          </div>
+        ))}
       </div>
 
-      <div className="mt-6 flex justify-end">
-        <Button
-          variant="primary"
-          disabled={!pick}
-          onClick={() => {
-            const s = c.suspects.find((x) => x.id === pick);
-            if (!s) return;
-            setVerdict({ correct: pick === killerId, name: s.name });
-          }}
-        >
-          <Gavel className="h-4 w-4" /> Submit accusation
+      {/* Step content */}
+      <div className="mt-6">
+        {step === 0 && (
+          <div className="grid gap-3 md:grid-cols-2 lg:grid-cols-3">
+            {c.suspects.map((s) => {
+              const sc = scores[s.id];
+              const meta = sc ? suspicionMeta[sc.band] : suspicionMeta.low;
+              const active = killer === s.id;
+              return (
+                <button
+                  key={s.id}
+                  onClick={() => setKiller(s.id)}
+                  className={cn(
+                    "rounded-xl border p-4 text-left transition-all",
+                    active ? "border-primary bg-primary/10 shadow-glow" : "border-border/70 bg-surface hover:border-accent/40",
+                  )}
+                >
+                  <div className="flex items-center gap-3">
+                    <div className="grid h-12 w-12 place-items-center rounded-xl border border-border/60 bg-background/60 font-mono text-sm text-accent">
+                      {s.initials}
+                    </div>
+                    <div>
+                      <p className="text-sm font-semibold">{s.name}</p>
+                      <p className="text-xs text-muted-foreground">{s.occupation}</p>
+                    </div>
+                  </div>
+                  {revealed && (
+                    <div className="mt-3 h-1.5 overflow-hidden rounded-full bg-background/60">
+                      <div className={cn("h-full", meta.bar)} style={{ width: `${sc?.score ?? 0}%` }} />
+                    </div>
+                  )}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
+        {step === 1 && (
+          <ChoiceGrid options={c.weaponOptions} value={weapon} onSelect={setWeapon} />
+        )}
+
+        {step === 2 && (
+          <ChoiceGrid options={c.motiveOptions} value={motive} onSelect={setMotive} />
+        )}
+      </div>
+
+      {/* Nav */}
+      <div className="mt-6 flex items-center justify-between">
+        <Button variant="ghost" onClick={() => setStep((s) => (s === 0 ? 0 : ((s - 1) as 0 | 1 | 2)))} disabled={step === 0}>
+          Back
         </Button>
+        {step < 2 ? (
+          <Button
+            variant="primary"
+            onClick={() => setStep((s) => ((s + 1) as 0 | 1 | 2))}
+            disabled={(step === 0 && !killer) || (step === 1 && !weapon)}
+          >
+            Next
+          </Button>
+        ) : (
+          <Button
+            variant="primary"
+            disabled={!canSubmit}
+            onClick={() => canSubmit && submitVerdict(killer!, weapon!, motive!)}
+          >
+            <Gavel className="h-4 w-4" /> Submit theory
+          </Button>
+        )}
       </div>
     </div>
   );
 }
+
+function ChoiceGrid({ options, value, onSelect }: { options: { id: string; label: string; detail?: string }[]; value: string | null; onSelect: (id: string) => void }) {
+  return (
+    <div className="grid gap-3 md:grid-cols-2">
+      {options.map((o) => {
+        const active = value === o.id;
+        return (
+          <button
+            key={o.id}
+            onClick={() => onSelect(o.id)}
+            className={cn(
+              "rounded-xl border p-4 text-left transition-all",
+              active ? "border-primary bg-primary/10 shadow-glow" : "border-border/70 bg-surface hover:border-accent/40",
+            )}
+          >
+            <p className="text-sm font-semibold">{o.label}</p>
+            {o.detail && <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{o.detail}</p>}
+          </button>
+        );
+      })}
+    </div>
+  );
+}
+
+function ReconstructionView({
+  case: c,
+  verdict,
+  examined,
+  important,
+  onReset,
+}: {
+  case: Case;
+  verdict: NonNullable<ReturnType<typeof useInvestigation>["verdict"]>;
+  examined: Set<string>;
+  important: Set<string>;
+  onReset: () => void;
+}) {
+  const [beat, setBeat] = useState(0);
+  const beats = c.solution.reconstruction;
+  const solved = verdict.correctKiller;
+  const truth = c.suspects.find((s) => s.id === c.solution.killerId);
+  const missed = c.solution.keyEvidenceIds.filter((id) => !examined.has(id));
+  const missedPins = c.solution.keyEvidenceIds.filter((id) => examined.has(id) && !important.has(id));
+
+  return (
+    <div className="mx-auto max-w-3xl">
+      {/* Verdict banner */}
+      <div className={cn(
+        "rounded-2xl border p-6 text-center",
+        solved ? "border-emerald-500/40 bg-emerald-500/10" : "border-primary/40 bg-primary/10",
+      )}>
+        <div className={cn(
+          "mx-auto grid h-14 w-14 place-items-center rounded-full",
+          solved ? "bg-emerald-500/20 text-emerald-300" : "bg-primary/20 text-primary",
+        )}>
+          <Gavel className="h-6 w-6" />
+        </div>
+        <h3 className="mt-3 text-xl font-semibold">
+          {solved ? "Case closed." : "The wrong name."}
+        </h3>
+        <p className="mt-1 text-sm text-muted-foreground">
+          You accused <span className="font-semibold text-foreground">{verdict.killerName}</span> with the{" "}
+          <span className="text-foreground">{verdict.weaponLabel}</span> — motive: <span className="text-foreground">{verdict.motiveLabel}</span>.
+        </p>
+
+        <div className="mt-5 grid grid-cols-4 gap-3">
+          <ScorePill label="Killer" ok={verdict.correctKiller} points={verdict.correctKiller ? 40 : 0} max={40} />
+          <ScorePill label="Weapon" ok={verdict.correctWeapon} points={verdict.correctWeapon ? 15 : 0} max={15} />
+          <ScorePill label="Motive" ok={verdict.correctMotive} points={verdict.correctMotive ? 15 : 0} max={15} />
+          <ScorePill label="Evidence" ok={verdict.evidenceScore >= 25} points={verdict.evidenceScore} max={40} />
+        </div>
+
+        <div className="mt-5 flex items-center justify-center gap-3">
+          <div className="rounded-full border border-accent/40 bg-accent/10 px-4 py-1.5 font-mono text-sm text-accent">
+            {verdict.totalScore} / {verdict.maxScore}
+          </div>
+          <div className="rounded-full border border-border/60 bg-surface px-4 py-1.5 font-mono text-sm">
+            Grade <span className="text-accent">{verdict.grade}</span>
+          </div>
+        </div>
+      </div>
+
+      {/* Cinematic reconstruction */}
+      <div className="mt-6 rounded-2xl border border-border/70 bg-surface p-6">
+        <div className="flex items-center justify-between">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-accent">What actually happened</p>
+          <p className="font-mono text-[10px] text-muted-foreground">Beat {beat + 1} / {beats.length}</p>
+        </div>
+
+        <div key={beat} className="mt-4 animate-in fade-in slide-in-from-bottom-2 duration-500">
+          <div className="flex items-baseline gap-3">
+            <span className="font-mono text-2xl font-bold text-accent">{beats[beat].time}</span>
+            <p className="text-base font-semibold">{beats[beat].label}</p>
+          </div>
+          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">{beats[beat].detail}</p>
+        </div>
+
+        <div className="mt-6 flex items-center justify-between">
+          <Button variant="ghost" onClick={() => setBeat((b) => Math.max(0, b - 1))} disabled={beat === 0}>
+            ← Rewind
+          </Button>
+          <div className="flex gap-1.5">
+            {beats.map((_, i) => (
+              <span key={i} className={cn("h-1.5 w-6 rounded-full transition-colors", i === beat ? "bg-accent" : i < beat ? "bg-accent/40" : "bg-border/60")} />
+            ))}
+          </div>
+          <Button variant="ghost" onClick={() => setBeat((b) => Math.min(beats.length - 1, b + 1))} disabled={beat === beats.length - 1}>
+            Next →
+          </Button>
+        </div>
+      </div>
+
+      {/* Truth + Missed */}
+      <div className="mt-6 grid gap-4 md:grid-cols-2">
+        <div className="rounded-xl border border-border/70 bg-surface p-5">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">The killer</p>
+          <p className="mt-1 text-sm font-semibold">{truth?.name}</p>
+          <p className="text-xs text-muted-foreground">{truth?.occupation}</p>
+          <p className="mt-3 text-xs leading-relaxed text-foreground/85">{truth?.motive}</p>
+        </div>
+        <div className="rounded-xl border border-border/70 bg-surface p-5">
+          <p className="font-mono text-[10px] uppercase tracking-widest text-muted-foreground">Missed clues</p>
+          {missed.length === 0 && missedPins.length === 0 ? (
+            <p className="mt-2 text-xs text-emerald-300/80">You collected — and pinned — every critical clue.</p>
+          ) : (
+            <ul className="mt-2 space-y-1.5 text-xs">
+              {missed.map((id) => {
+                const e = c.evidence.find((x) => x.id === id);
+                return <li key={id} className="flex items-start gap-2 text-primary/90"><span>×</span><span>Never found: <span className="text-foreground">{e?.label}</span></span></li>;
+              })}
+              {missedPins.map((id) => {
+                const e = c.evidence.find((x) => x.id === id);
+                return <li key={id} className="flex items-start gap-2 text-accent/90"><span>•</span><span>Never pinned: <span className="text-foreground">{e?.label}</span></span></li>;
+              })}
+            </ul>
+          )}
+        </div>
+      </div>
+
+      {/* Recurring clue */}
+      <div className="mt-6 overflow-hidden rounded-2xl border border-primary/40 bg-gradient-to-br from-primary/15 via-surface to-background p-5 shadow-glow">
+        <div className="flex items-center gap-2">
+          <Sparkles className="h-4 w-4 text-primary" />
+          <p className="font-mono text-[10px] uppercase tracking-[0.28em] text-primary">Something else was here</p>
+        </div>
+        <div className="mt-4 flex items-start gap-3">
+          <span className="grid h-11 w-11 shrink-0 place-items-center rounded-xl border border-primary/40 bg-primary/10 font-mono text-sm font-bold text-primary">//</span>
+          <div className="min-w-0">
+            <p className="text-sm font-semibold">A single crimson silk thread</p>
+            <p className="mt-1 text-xs leading-relaxed text-muted-foreground">
+              Snagged on the vestibule hinge. It doesn't match Carter's coat, or anything the five passengers were wearing. It shouldn't be here.
+            </p>
+            <p className="mt-2 font-mono text-[10px] uppercase tracking-widest text-accent">Filed to archive · Meaning unresolved</p>
+          </div>
+        </div>
+      </div>
+
+      <div className="mt-6 flex items-center justify-center gap-3">
+        <Button variant="secondary" onClick={onReset}>Reopen investigation</Button>
+        <a href="/archive" className="inline-flex items-center gap-1.5 text-xs font-medium text-accent hover:brightness-110">
+          Open the archive →
+        </a>
+      </div>
+    </div>
+  );
+}
+
+function ScorePill({ label, ok, points, max }: { label: string; ok: boolean; points: number; max: number }) {
+  return (
+    <div className={cn(
+      "rounded-lg border p-2 text-center",
+      ok ? "border-emerald-500/40 bg-emerald-500/10" : "border-border/60 bg-surface",
+    )}>
+      <p className="font-mono text-[9px] uppercase tracking-widest text-muted-foreground">{label}</p>
+      <p className={cn("mt-0.5 font-mono text-sm font-bold", ok ? "text-emerald-300" : "text-foreground/70")}>
+        {points}<span className="text-[10px] text-muted-foreground">/{max}</span>
+      </p>
+    </div>
+  );
+}
+
 
 /* ---------- Empty state ---------- */
 

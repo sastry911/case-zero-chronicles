@@ -26,6 +26,10 @@ export interface Evidence {
   suspicionImpact: Record<string, number>;
   notebookNote: string;
   timelineUnlock?: TimelineEvent;
+  /** Optional forensic lab report — only revealed once evidence is collected. */
+  forensicReport?: string;
+  /** If true, the clue looks meaningful but does not point to the true killer. */
+  redHerring?: boolean;
 }
 
 export interface Suspect {
@@ -36,19 +40,47 @@ export interface Suspect {
   relationship: string;
   alibi: string;
   statement: string;
-  /** 0-100 baseline; meter is baseline + sum of suspicion impacts from examined evidence. */
   baselineSuspicion: number;
   motive: string;
   timeline: TimelineEvent[];
+  /** Revealed once the suspect has been interviewed. */
+  secret?: string;
 }
 
 export interface CrimeSceneHotspot {
   id: string;
-  /** Percentage position over the crime scene image. */
   x: number;
   y: number;
   label: string;
   evidenceId: string;
+}
+
+export interface CaseChoice {
+  id: string;
+  label: string;
+  detail?: string;
+}
+
+export interface CaseObjective {
+  id: string;
+  label: string;
+  kind: "hotspots" | "evidence" | "suspects" | "timeline" | "forensics" | "notebook";
+  target?: number;
+}
+
+export interface ReconstructionBeat {
+  time: string;
+  label: string;
+  detail: string;
+}
+
+export interface CaseSolution {
+  killerId: string;
+  weaponId: string;
+  motiveId: string;
+  keyEvidenceIds: string[];
+  reconstruction: ReconstructionBeat[];
+  epilogue: string;
 }
 
 export interface Case {
@@ -72,6 +104,10 @@ export interface Case {
   suspects: Suspect[];
   hotspots: CrimeSceneHotspot[];
   baseTimeline: TimelineEvent[];
+  weaponOptions: CaseChoice[];
+  motiveOptions: CaseChoice[];
+  objectives: CaseObjective[];
+  solution: CaseSolution;
 }
 
 export const case001: Case = {
@@ -111,6 +147,7 @@ export const case001: Case = {
       suspicionImpact: { "sus-02": 12, "sus-04": 8 },
       notebookNote: "Punched at 23:51 — someone boarded Car 7 after departure.",
       timelineUnlock: { id: "tu-01", time: "23:51", label: "Unticketed entry", detail: "An extra passenger boards Car 7 mid-route." },
+      forensicReport: "Lab B: paper stock matches metro-issue booklets. Ink residue on the punch dates the mark to within four minutes of the argument. No fingerprints — the entrant wore gloves.",
     },
     {
       id: "ev-02",
@@ -129,6 +166,7 @@ export const case001: Case = {
       suspicionImpact: { "sus-01": 8, "sus-02": 10, "sus-04": 4 },
       notebookNote: "Okafor saw two passengers arguing near the rear door at 23:51.",
       timelineUnlock: { id: "tu-02", time: "23:51", label: "Argument observed", detail: "Conductor reports raised voices in Car 7." },
+      forensicReport: "Deposition cross-checked against Okafor's radio log. The 'woman in a green scarf' detail conflicts with the tunnel-light audit — that stretch of Car 7 was too dark to read colour. Testimony downgraded.",
     },
     {
       id: "ev-03",
@@ -147,6 +185,7 @@ export const case001: Case = {
       suspicionImpact: { "sus-01": 4 },
       notebookNote: "Victim believed her life was at risk before boarding. Folder entrusted to Sister Aune.",
       timelineUnlock: { id: "tu-03", time: "23:44", label: "Premonition message", detail: "Carter warns an unknown contact she may not survive the ride." },
+      forensicReport: "Digital forensics: the burner SIM pings a tower two stations south. Recovered metadata proves message reached Aune's device before departure. No reply was ever sent.",
     },
     {
       id: "ev-04",
@@ -165,6 +204,7 @@ export const case001: Case = {
       suspicionImpact: { "sus-01": 18, "sus-03": -4 },
       notebookNote: "Victim was documenting structural shortcuts approved by Voss.",
       timelineUnlock: { id: "tu-04", time: "23:30", label: "Motive surfaces", detail: "Blueprint reveals Voss as Carter's target." },
+      forensicReport: "Paper analysis: the missing signature panel was torn, not cut. Fibre residue on the tear matches a brass edge — likely the corner of a bookend or heavy office object, not scissors or a blade.",
     },
     {
       id: "ev-05",
@@ -183,6 +223,8 @@ export const case001: Case = {
       suspicionImpact: { "sus-04": 16 },
       notebookNote: "Camera cut required a staff key — narrows access to crew.",
       timelineUnlock: { id: "tu-05", time: "23:49", label: "Cameras blacked out", detail: "Someone with a staff key kills the Car 7 feed." },
+      forensicReport: "Server logs confirm the breaker was tripped from Okafor's panel — but the timing (before the argument) is inconsistent with a planned killing. Points to a bribe, not premeditation by the conductor himself.",
+      redHerring: true,
     },
     {
       id: "ev-06",
@@ -201,6 +243,7 @@ export const case001: Case = {
       suspicionImpact: { "sus-02": 20 },
       notebookNote: "Cufflink initials 'M.H.' place Hale at the scene despite his denial.",
       timelineUnlock: { id: "tu-06", time: "23:52", label: "Hale placed at scene", detail: "Cufflink ties Marcus Hale to seat 12A." },
+      forensicReport: "Metallurgy: bespoke May commission by 'Suri & Co.' Records show the pair was collected by Hale in person on May 14. Under UV, faint blood trace matches the victim's type.",
     },
   ],
   suspects: [
@@ -221,6 +264,7 @@ export const case001: Case = {
         { id: "t3", time: "23:51", label: "Whereabouts unverified", detail: "No witness; conductor describes a woman in a green scarf in Car 7." },
         { id: "t4", time: "00:12", label: "Found in Car 4", detail: "Reading a contract when transit police arrived." },
       ],
+      secret: "Under interrogation, Voss admits she left Car 4 briefly at 23:53 — to make a call about the very sign-offs Carter was preparing to publish.",
     },
     {
       id: "sus-02",
@@ -239,6 +283,7 @@ export const case001: Case = {
         { id: "t3", time: "23:51", label: "Seen near Car 7 vestibule", detail: "Matches conductor's 'tall man in charcoal coat' description." },
         { id: "t4", time: "00:09", label: "Returned to Car 6", detail: "Observed by another passenger, breathing heavily." },
       ],
+      secret: "When pressed, Hale's story cracks — he admits he boarded the 23:47 specifically because he knew Carter's Monday commute. He denies the killing. He denies the cufflink. He does not deny watching her.",
     },
     {
       id: "sus-03",
@@ -257,6 +302,7 @@ export const case001: Case = {
         { id: "t3", time: "23:51", label: "Recording continues", detail: "Audio places her in Car 2 throughout." },
         { id: "t4", time: "00:12", label: "Cooperating with police", detail: "Volunteered her recordings immediately." },
       ],
+      secret: "Reyes quietly confirms she has a second copy of Carter's blueprint annotations. She will publish, with or without a killer named.",
     },
     {
       id: "sus-04",
@@ -275,6 +321,7 @@ export const case001: Case = {
         { id: "t3", time: "23:51", label: "Witnessed argument in Car 7", detail: "Describes a man and a woman near the rear door." },
         { id: "t4", time: "00:08", label: "Reports body", detail: "Calls it in from the conductor's intercom." },
       ],
+      secret: "Okafor confesses: he was paid ₹40,000 that morning to kill the Car 7 feed for six minutes. He didn't know why. He didn't ask.",
     },
     {
       id: "sus-05",
@@ -293,6 +340,7 @@ export const case001: Case = {
         { id: "t3", time: "23:51", label: "In Car 1", detail: "Witnessed by two passengers." },
         { id: "t4", time: "00:15", label: "Surrenders folder", detail: "Hands sealed folder to transit police." },
       ],
+      secret: "Aune opened the folder. She read enough to know Carter was right. She sealed it again before the police arrived.",
     },
   ],
   hotspots: [
@@ -308,7 +356,44 @@ export const case001: Case = {
     { id: "b2", time: "23:47", label: "Train departs", detail: "Doors close. No further entries or exits until 00:12." },
     { id: "b3", time: "00:12", label: "Body discovered", detail: "Conductor finds Emily Carter slumped against the rear vestibule." },
   ],
+  weaponOptions: [
+    { id: "w-torch", label: "Weighted maglite", detail: "Heavy service torch. Standard metro staff issue." },
+    { id: "w-wrench", label: "Vestibule wrench", detail: "Kept in the rear-door emergency locker." },
+    { id: "w-bookend", label: "Brass bookend", detail: "From the victim's satchel — a gift from her studio." },
+    { id: "w-umbrella", label: "Umbrella handle", detail: "Solid teak. Belonged to a passenger." },
+  ],
+  motiveOptions: [
+    { id: "m-revenge", label: "Career revenge", detail: "A public humiliation, two years unpaid." },
+    { id: "m-contract", label: "Contract cover-up", detail: "Silence Carter before she went public." },
+    { id: "m-debts", label: "Paid to silence", detail: "Gambling debts, a quiet envelope." },
+    { id: "m-faith", label: "Personal faith", detail: "A confessor turned zealot." },
+  ],
+  objectives: [
+    { id: "obj-hotspots", label: "Sweep every hotspot on the scene", kind: "hotspots" },
+    { id: "obj-evidence", label: "Collect all six pieces of evidence", kind: "evidence" },
+    { id: "obj-suspects", label: "Interview all five passengers", kind: "suspects" },
+    { id: "obj-timeline", label: "Reconstruct the full timeline", kind: "timeline" },
+    { id: "obj-forensics", label: "Read every forensic report", kind: "forensics" },
+    { id: "obj-notebook", label: "Pin at least three deductions", kind: "notebook", target: 3 },
+  ],
+  solution: {
+    killerId: "sus-02",
+    weaponId: "w-bookend",
+    motiveId: "m-revenge",
+    keyEvidenceIds: ["ev-06", "ev-02", "ev-04", "ev-01"],
+    reconstruction: [
+      { time: "23:44", label: "The warning", detail: "Carter, sensing she is being followed, messages Sister Aune and hands off the folder at the platform." },
+      { time: "23:47", label: "Departure", detail: "The 23:47 leaves platform 3. Hale is already aboard in Car 6, waiting." },
+      { time: "23:49", label: "Cameras die", detail: "Okafor kills the Car 7 feed for an unrelated bribe — accidentally handing Hale the cover he needed." },
+      { time: "23:51", label: "The confrontation", detail: "Hale slips into Car 7, punches a fresh ticket, and corners Carter at the vestibule. Voice raised — the conductor hears it and moves on." },
+      { time: "23:52", label: "The blow", detail: "Hale swings the brass bookend from Carter's own satchel. One strike. He tears the signature panel from the blueprint and vanishes back to Car 6." },
+      { time: "00:12", label: "Discovery", detail: "The lights come up at the tunnel exit. Okafor finds the body. Carter's folder is already safe with Aune." },
+    ],
+    epilogue:
+      "Marcus Hale killed Emily Carter for a career she took from him two years earlier. The bookend was a small cruelty — Carter had gifted it to the studio the year she promoted him, and then, a year later, fired him with it on the shelf behind her.",
+  },
 };
+
 
 export const allCases: Case[] = [case001];
 
