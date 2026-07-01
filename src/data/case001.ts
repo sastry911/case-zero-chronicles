@@ -83,6 +83,18 @@ export interface CaseSolution {
   epilogue: string;
 }
 
+/** Logical relationship between two pieces of evidence — the red thread on the desk. */
+export interface EvidenceConnection {
+  id: string;
+  a: string;
+  b: string;
+  label: string;
+  insight: string;
+  /** Bonus XP granted the first time a player links these two clues. */
+  xp?: number;
+}
+
+
 export interface Case {
   id: string;
   number: string;
