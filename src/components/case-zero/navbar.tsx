@@ -1,12 +1,13 @@
 import { Link, useRouterState } from "@tanstack/react-router";
-import { Fingerprint, LayoutDashboard, Trophy, UserRound, Menu, X, Volume2, VolumeX } from "lucide-react";
+import { Fingerprint, LayoutDashboard, Layers, Archive, UserRound, Menu, X, Volume2, VolumeX } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
 import { ui, useUI } from "@/lib/ui-store";
 
 const links = [
   { to: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/leaderboard", label: "Leaderboard", icon: Trophy },
+  { to: "/season", label: "Season", icon: Layers },
+  { to: "/archive", label: "Archive", icon: Archive },
   { to: "/profile", label: "Profile", icon: UserRound },
 ] as const;
 
@@ -70,7 +71,7 @@ export function Navbar() {
             to="/dashboard"
             className="inline-flex items-center justify-center rounded-md bg-primary px-4 py-2 text-sm font-semibold text-primary-foreground shadow-glow transition-transform hover:-translate-y-0.5"
           >
-            Open case
+            Open file
           </Link>
         </div>
 
@@ -110,7 +111,7 @@ export function Navbar() {
                 Sign in
               </Link>
               <Link to="/dashboard" onClick={() => setOpen(false)} className="flex-1 rounded-md bg-primary px-3 py-2 text-center text-sm font-semibold text-primary-foreground">
-                Open case
+                Open file
               </Link>
             </div>
           </nav>
