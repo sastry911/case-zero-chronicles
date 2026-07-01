@@ -245,16 +245,29 @@ function InvestigationDesk() {
         <TimelinePanel timeline={inv.timeline} baseIds={new Set(c.baseTimeline.map((t) => t.id))} />
       </FocusSheet>
 
-      <FocusSheet open={openTab === "notebook"} title="Detective Notebook" subtitle="Pinned clues and personal notes" onClose={() => setOpenTab(null)}>
-        <NotebookPanel
+      <FocusSheet open={openTab === "table"} title="Evidence Table" subtitle="Arrange, flip, and thread together every clue you've collected." onClose={() => setOpenTab(null)}>
+        <EvidenceTable
+          case={c}
+          examined={inv.examined}
+          placements={inv.deskPlacements}
+          important={inv.important}
+          compareSet={inv.compareSet}
           notes={inv.notebook}
-          evidence={c.evidence}
-          onTogglePin={inv.togglePin}
-          onRemove={inv.removeNote}
-          onUpdate={inv.updateNote}
-          onAdd={inv.addCustomNote}
+          evidenceStates={inv.evidenceStates}
+          discoveredConnections={inv.discoveredConnections}
+          discoveredKeys={inv.discoveredConnectionKeys}
+          onMove={(id, p) => inv.setDeskPlacement(id, p)}
+          onRotate={(id) => inv.rotateEvidence(id)}
+          onFlip={inv.flipEvidence}
+          onToggleImportant={inv.toggleImportant}
+          onToggleCompare={inv.toggleCompare}
+          onClearCompare={inv.clearCompare}
+          onTryConnect={inv.tryConnect}
+          onAddNote={inv.addEvidenceNote}
+          onRemoveNote={inv.removeNote}
         />
       </FocusSheet>
+
 
       <FocusSheet open={openTab === "forensics"} title="Forensics Lab" subtitle="Chain of custody & lab notes" onClose={() => setOpenTab(null)}>
         <ForensicsPanel examined={examinedEvidence} readIds={inv.forensicsRead} onRead={inv.readForensic} />
