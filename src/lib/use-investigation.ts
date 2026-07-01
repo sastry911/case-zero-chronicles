@@ -307,6 +307,76 @@ class Store {
     this.emit();
   }
 
+  /* ---------- Evidence Table ---------- */
+
+  setDeskPlacement(evId: string, p: Partial<DeskPlacement>) {
+    const cur = this.state.deskPlacements[evId] ?? DEFAULT_PLACEMENT;
+    this.state.deskPlacements = { ...this.state.deskPlacements, [evId]: { ...cur, ...p } };
+    if (!this.state.pickedUp.has(evId)) {
+      this.state.pickedUp = new Set(this.state.pickedUp).add(evId);
+    }
+    this.emit();
+  }
+
+  rotateEvidence(evId: string, delta = 15) {
+    const cur = this.state.deskPlacements[evId] ?? DEFAULT_PLACEMENT;
+    this.setDeskPlacement(evId, { rotation: cur.rotation + delta });
+  }
+
+  flipEvidence(evId: string) {
+    const cur = this.state.deskPlacements[evId] ?? DEFAULT_PLACEMENT;
+    this.setDeskPlacement(evId, { flipped: !cur.flipped });
+  }
+
+  pickUp(evId: string) {
+    if (this.state.pickedUp.has(evId)) return;
+    this.state.pickedUp = new Set(this.state.pickedUp).add(evId);
+    this.emit();
+  }
+
+  /** Attempts to link two clues. Returns the connection if a match exists. */
+  tryConnect(a: string, b: string): { connection: EvidenceConnection | null; alreadyKnown: boolean } {
+    const key = pairKey(a, b);
+    const alreadyKnown = this.state.discoveredConnections.has(key);
+    const match = this.caseRef.connections.find(
+      (cn) => pairKey(cn.a, cn.b) === key,
+    );
+    if (match && !alreadyKnown) {
+      this.state.discoveredConnections = new Set(this.state.discoveredConnections).add(key);
+      const bonus = match.xp ?? 15;
+      this.state.xp += bonus;
+      this.state.intuition = Math.min(100, this.state.intuition + 8);
+      ui.spawnXp(bonus);
+      this.state.compareSet = [];
+      this.emit();
+    } else if (!match) {
+      // remember rejection briefly for UI feedback
+      this.state.failedPairs = [...this.state.failedPairs.slice(-5), key];
+      this.emit();
+    } else {
+      this.emit();
+    }
+    return { connection: match ?? null, alreadyKnown };
+  }
+
+  addEvidenceNote(evId: string, text: string) {
+    if (!text.trim()) return;
+    this.state.notebook = [
+      ...this.state.notebook,
+      {
+        id: `n-note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        evidenceId: evId,
+        note: text.trim(),
+        at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        pinned: true,
+        custom: true,
+      },
+    ];
+    this.emit();
+  }
+
+
+
   submitVerdict(killerId: string, weaponId: string, motiveId: string, primaryEvidenceId: string): Verdict {
     const sol = this.caseRef.solution;
     const correctKiller = killerId === sol.killerId;
