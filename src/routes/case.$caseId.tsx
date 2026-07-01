@@ -1234,17 +1234,24 @@ function AccusePanel({
   examined: Set<string>;
   important: Set<string>;
 }) {
-  const [step, setStep] = useState<0 | 1 | 2>(0);
+  const [step, setStep] = useState<0 | 1 | 2 | 3>(0);
   const [killer, setKiller] = useState<string | null>(null);
   const [weapon, setWeapon] = useState<string | null>(null);
   const [motive, setMotive] = useState<string | null>(null);
+  const [primary, setPrimary] = useState<string | null>(null);
+  const [confirmOpen, setConfirmOpen] = useState(false);
 
   if (verdict) {
     return <ReconstructionView case={c} verdict={verdict} examined={examined} important={important} onReset={resetInvestigation} />;
   }
 
-  const stepLabels = ["Killer", "Weapon", "Motive"];
-  const canSubmit = killer && weapon && motive;
+  const stepLabels = ["Killer", "Weapon", "Motive", "Evidence"];
+  const canSubmit = !!(killer && weapon && motive && primary);
+  const examinedEvidence = c.evidence.filter((e) => examined.has(e.id));
+  const killerName = c.suspects.find(s => s.id === killer)?.name ?? "";
+  const weaponLabel = c.weaponOptions.find(w => w.id === weapon)?.label ?? "";
+  const motiveLabel = c.motiveOptions.find(m => m.id === motive)?.label ?? "";
+  const primaryLabel = c.evidence.find(e => e.id === primary)?.label ?? "";
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -1256,7 +1263,7 @@ function AccusePanel({
         <p className="mt-1 text-xs text-muted-foreground">
           {progress < 60
             ? "You may not have enough to convict. Gather more clues before you accuse."
-            : "Reconstruct what happened. Every pick is scored — killer, weapon and motive."}
+            : "Name the killer, weapon, motive and the single piece of evidence that proves it."}
         </p>
       </div>
 
@@ -1320,18 +1327,46 @@ function AccusePanel({
         {step === 2 && (
           <ChoiceGrid options={c.motiveOptions} value={motive} onSelect={setMotive} />
         )}
+
+        {step === 3 && (
+          examinedEvidence.length === 0 ? (
+            <EmptyState icon={Fingerprint} title="No evidence collected" body="Return to the crime scene and gather at least one clue before you accuse." />
+          ) : (
+            <div className="grid gap-3 md:grid-cols-2">
+              {examinedEvidence.map((e) => {
+                const active = primary === e.id;
+                return (
+                  <button
+                    key={e.id}
+                    onClick={() => setPrimary(e.id)}
+                    className={cn(
+                      "rounded-xl border p-4 text-left transition-all",
+                      active ? "border-primary bg-primary/10 shadow-glow" : "border-border/70 bg-surface hover:border-accent/40",
+                    )}
+                  >
+                    <div className="flex items-center justify-between">
+                      <p className="text-sm font-semibold">{e.label}</p>
+                      <Badge tone={importanceTone[e.importance]}>{e.importance}</Badge>
+                    </div>
+                    <p className="mt-1 text-xs leading-relaxed text-muted-foreground">{e.summary}</p>
+                  </button>
+                );
+              })}
+            </div>
+          )
+        )}
       </div>
 
       {/* Nav */}
       <div className="mt-6 flex items-center justify-between">
-        <Button variant="ghost" onClick={() => setStep((s) => (s === 0 ? 0 : ((s - 1) as 0 | 1 | 2)))} disabled={step === 0}>
+        <Button variant="ghost" onClick={() => setStep((s) => (s === 0 ? 0 : ((s - 1) as 0 | 1 | 2 | 3)))} disabled={step === 0}>
           Back
         </Button>
-        {step < 2 ? (
+        {step < 3 ? (
           <Button
             variant="primary"
-            onClick={() => setStep((s) => ((s + 1) as 0 | 1 | 2))}
-            disabled={(step === 0 && !killer) || (step === 1 && !weapon)}
+            onClick={() => setStep((s) => ((s + 1) as 0 | 1 | 2 | 3))}
+            disabled={(step === 0 && !killer) || (step === 1 && !weapon) || (step === 2 && !motive)}
           >
             Next
           </Button>
@@ -1339,12 +1374,38 @@ function AccusePanel({
           <Button
             variant="primary"
             disabled={!canSubmit}
-            onClick={() => canSubmit && submitVerdict(killer!, weapon!, motive!)}
+            onClick={() => canSubmit && setConfirmOpen(true)}
           >
-            <Gavel className="h-4 w-4" /> Submit theory
+            <Gavel className="h-4 w-4" /> Submit accusation
           </Button>
         )}
       </div>
+
+      <AlertDialog open={confirmOpen} onOpenChange={setConfirmOpen}>
+        <AlertDialogContent className="border-border/70 bg-surface">
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2">
+              <Gavel className="h-4 w-4 text-primary" /> Formal accusation
+            </AlertDialogTitle>
+            <AlertDialogDescription className="pt-2">
+              You are about to charge <span className="font-semibold text-foreground">{killerName}</span> with the murder of {c.victim.name} using the <span className="text-foreground">{weaponLabel}</span>. Motive: <span className="text-foreground">{motiveLabel}</span>. Primary evidence: <span className="text-foreground">{primaryLabel}</span>.
+              <span className="mt-3 block text-xs text-muted-foreground">This decision closes the case. It cannot be revised.</span>
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Review evidence</AlertDialogCancel>
+            <AlertDialogAction
+              className="bg-primary text-primary-foreground hover:bg-primary/90"
+              onClick={() => {
+                if (canSubmit) submitVerdict(killer!, weapon!, motive!, primary!);
+                setConfirmOpen(false);
+              }}
+            >
+              File accusation
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   );
 }
