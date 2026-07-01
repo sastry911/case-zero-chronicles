@@ -58,6 +58,10 @@ interface InvestigationState {
   unlockedAchievements: Set<string>;
   compareSet: string[];
   verdict: Verdict | null;
+  deskPlacements: Record<string, DeskPlacement>;
+  pickedUp: Set<string>;
+  discoveredConnections: Set<string>;
+  failedPairs: string[]; // rolling history of last failed compare keys for feedback
 }
 
 const initial = (): InvestigationState => ({
@@ -72,10 +76,14 @@ const initial = (): InvestigationState => ({
   unlockedAchievements: new Set(),
   compareSet: [],
   verdict: null,
+  deskPlacements: {},
+  pickedUp: new Set(),
+  discoveredConnections: new Set(),
+  failedPairs: [],
 });
 
 const STORAGE_PREFIX = "case-zero:inv:";
-const STORAGE_VERSION = 2;
+const STORAGE_VERSION = 3;
 
 function serialize(state: InvestigationState) {
   return JSON.stringify({
@@ -91,6 +99,9 @@ function serialize(state: InvestigationState) {
     unlockedAchievements: [...state.unlockedAchievements],
     compareSet: state.compareSet,
     verdict: state.verdict,
+    deskPlacements: state.deskPlacements,
+    pickedUp: [...state.pickedUp],
+    discoveredConnections: [...state.discoveredConnections],
   });
 }
 
@@ -111,11 +122,16 @@ function deserialize(raw: string | null): InvestigationState | null {
       unlockedAchievements: new Set<string>(p.unlockedAchievements ?? []),
       compareSet: p.compareSet ?? [],
       verdict: p.verdict ?? null,
+      deskPlacements: p.deskPlacements ?? {},
+      pickedUp: new Set<string>(p.pickedUp ?? []),
+      discoveredConnections: new Set<string>(p.discoveredConnections ?? []),
+      failedPairs: [],
     };
   } catch {
     return null;
   }
 }
+
 
 const stores = new Map<string, Store>();
 
