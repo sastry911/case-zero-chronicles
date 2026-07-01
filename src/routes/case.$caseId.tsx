@@ -31,6 +31,8 @@ import {
 import { PageLayout } from "@/components/case-zero/page-layout";
 import { Button } from "@/components/case-zero/button";
 import { Badge, DifficultyStars } from "@/components/case-zero/badge";
+import { EvidenceTable } from "@/components/case-zero/evidence-table";
+
 import { AnimatedNumber } from "@/components/case-zero/animated-number";
 import {
   Dialog,
@@ -118,16 +120,17 @@ const suspicionMeta: Record<SuspicionLevel, { label: string; bar: string; tone: 
   prime: { label: "Prime", bar: "bg-primary", tone: "primary" },
 };
 
-type DockTab = "evidence" | "suspects" | "timeline" | "notebook" | "forensics" | "accuse";
+type DockTab = "evidence" | "suspects" | "timeline" | "table" | "forensics" | "accuse";
 
 const DOCK_TABS: { id: DockTab; label: string; icon: typeof Eye }[] = [
   { id: "evidence", label: "Evidence", icon: Fingerprint },
   { id: "suspects", label: "Suspects", icon: Users },
   { id: "timeline", label: "Timeline", icon: ScanSearch },
-  { id: "notebook", label: "Notebook", icon: NotebookPen },
+  { id: "table", label: "Evidence Table", icon: NotebookPen },
   { id: "forensics", label: "Forensics", icon: FileText },
   { id: "accuse", label: "Accuse", icon: Gavel },
 ];
+
 
 const SUSPICION_REVEAL_THRESHOLD = 3;
 
@@ -212,10 +215,11 @@ function InvestigationDesk() {
           evidence: inv.examined.size,
           suspects: c.suspects.length,
           timeline: inv.timeline.length,
-          notebook: inv.notebook.length,
+          table: inv.discoveredConnections.length,
           forensics: examinedEvidence.length,
         }}
       />
+
 
       {/* Focus-mode sheets */}
       <FocusSheet open={openTab === "evidence"} title="Evidence Locker" subtitle={`${inv.examined.size} of ${c.evidence.length} collected`} onClose={() => setOpenTab(null)}>
@@ -241,16 +245,29 @@ function InvestigationDesk() {
         <TimelinePanel timeline={inv.timeline} baseIds={new Set(c.baseTimeline.map((t) => t.id))} />
       </FocusSheet>
 
-      <FocusSheet open={openTab === "notebook"} title="Detective Notebook" subtitle="Pinned clues and personal notes" onClose={() => setOpenTab(null)}>
-        <NotebookPanel
+      <FocusSheet open={openTab === "table"} title="Evidence Table" subtitle="Arrange, flip, and thread together every clue you've collected." onClose={() => setOpenTab(null)}>
+        <EvidenceTable
+          case={c}
+          examined={inv.examined}
+          placements={inv.deskPlacements}
+          important={inv.important}
+          compareSet={inv.compareSet}
           notes={inv.notebook}
-          evidence={c.evidence}
-          onTogglePin={inv.togglePin}
-          onRemove={inv.removeNote}
-          onUpdate={inv.updateNote}
-          onAdd={inv.addCustomNote}
+          evidenceStates={inv.evidenceStates}
+          discoveredConnections={inv.discoveredConnections}
+          discoveredKeys={inv.discoveredConnectionKeys}
+          onMove={(id, p) => inv.setDeskPlacement(id, p)}
+          onRotate={(id) => inv.rotateEvidence(id)}
+          onFlip={inv.flipEvidence}
+          onToggleImportant={inv.toggleImportant}
+          onToggleCompare={inv.toggleCompare}
+          onClearCompare={inv.clearCompare}
+          onTryConnect={inv.tryConnect}
+          onAddNote={inv.addEvidenceNote}
+          onRemoveNote={inv.removeNote}
         />
       </FocusSheet>
+
 
       <FocusSheet open={openTab === "forensics"} title="Forensics Lab" subtitle="Chain of custody & lab notes" onClose={() => setOpenTab(null)}>
         <ForensicsPanel examined={examinedEvidence} readIds={inv.forensicsRead} onRead={inv.readForensic} />

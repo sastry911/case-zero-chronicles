@@ -1,7 +1,19 @@
 import { useCallback, useMemo, useSyncExternalStore } from "react";
-import type { Case, CaseObjective, Evidence } from "@/data/case001";
+import type { Case, CaseObjective, Evidence, EvidenceConnection } from "@/data/case001";
 import { suspicionBand, type SuspicionLevel } from "@/data/case001";
 import { ui } from "./ui-store";
+
+export type EvidenceState = "found" | "examined" | "analyzed" | "linked" | "proven";
+
+export interface DeskPlacement {
+  x: number; // percent 0-100 of desk width
+  y: number; // percent 0-100 of desk height
+  rotation: number; // degrees
+  flipped: boolean;
+}
+
+const DEFAULT_PLACEMENT: DeskPlacement = { x: 50, y: 50, rotation: 0, flipped: false };
+
 
 interface NotebookNote {
   id: string;
@@ -46,6 +58,10 @@ interface InvestigationState {
   unlockedAchievements: Set<string>;
   compareSet: string[];
   verdict: Verdict | null;
+  deskPlacements: Record<string, DeskPlacement>;
+  pickedUp: Set<string>;
+  discoveredConnections: Set<string>;
+  failedPairs: string[]; // rolling history of last failed compare keys for feedback
 }
 
 const initial = (): InvestigationState => ({
@@ -60,10 +76,14 @@ const initial = (): InvestigationState => ({
   unlockedAchievements: new Set(),
   compareSet: [],
   verdict: null,
+  deskPlacements: {},
+  pickedUp: new Set(),
+  discoveredConnections: new Set(),
+  failedPairs: [],
 });
 
 const STORAGE_PREFIX = "case-zero:inv:";
-const STORAGE_VERSION = 2;
+const STORAGE_VERSION = 3;
 
 function serialize(state: InvestigationState) {
   return JSON.stringify({
@@ -79,6 +99,9 @@ function serialize(state: InvestigationState) {
     unlockedAchievements: [...state.unlockedAchievements],
     compareSet: state.compareSet,
     verdict: state.verdict,
+    deskPlacements: state.deskPlacements,
+    pickedUp: [...state.pickedUp],
+    discoveredConnections: [...state.discoveredConnections],
   });
 }
 
@@ -99,13 +122,22 @@ function deserialize(raw: string | null): InvestigationState | null {
       unlockedAchievements: new Set<string>(p.unlockedAchievements ?? []),
       compareSet: p.compareSet ?? [],
       verdict: p.verdict ?? null,
+      deskPlacements: p.deskPlacements ?? {},
+      pickedUp: new Set<string>(p.pickedUp ?? []),
+      discoveredConnections: new Set<string>(p.discoveredConnections ?? []),
+      failedPairs: [],
     };
   } catch {
     return null;
   }
 }
 
+
 const stores = new Map<string, Store>();
+
+export function pairKey(a: string, b: string) {
+  return a < b ? `${a}|${b}` : `${b}|${a}`;
+}
 
 const ACHIEVEMENTS = [
   { id: "first_clue", label: "Sharp Eye", detail: "First clue uncovered", test: (s: InvestigationState) => s.examinedEvidence.size >= 1 },
@@ -114,7 +146,10 @@ const ACHIEVEMENTS = [
   { id: "master_observer", label: "Master Observer", detail: "Examined every object", test: (s: InvestigationState, c: Case) => s.examinedEvidence.size >= c.evidence.length },
   { id: "intuition_unlocked", label: "Detective Intuition", detail: "Intuition fully charged", test: (s: InvestigationState) => s.intuition >= 100 },
   { id: "lab_rat", label: "Lab Rat", detail: "Read every forensic report", test: (s: InvestigationState, c: Case) => s.forensicsRead.size >= c.evidence.filter(e => e.forensicReport).length && c.evidence.some(e => e.forensicReport) },
+  { id: "first_thread", label: "Red Thread", detail: "Connected two pieces of evidence", test: (s: InvestigationState) => s.discoveredConnections.size >= 1 },
+  { id: "web_spinner", label: "Web Spinner", detail: "Discovered every logical connection", test: (s: InvestigationState, c: Case) => c.connections.length > 0 && s.discoveredConnections.size >= c.connections.length },
 ] as const;
+
 
 class Store {
   private state: InvestigationState;
@@ -272,6 +307,76 @@ class Store {
     this.emit();
   }
 
+  /* ---------- Evidence Table ---------- */
+
+  setDeskPlacement(evId: string, p: Partial<DeskPlacement>) {
+    const cur = this.state.deskPlacements[evId] ?? DEFAULT_PLACEMENT;
+    this.state.deskPlacements = { ...this.state.deskPlacements, [evId]: { ...cur, ...p } };
+    if (!this.state.pickedUp.has(evId)) {
+      this.state.pickedUp = new Set(this.state.pickedUp).add(evId);
+    }
+    this.emit();
+  }
+
+  rotateEvidence(evId: string, delta = 15) {
+    const cur = this.state.deskPlacements[evId] ?? DEFAULT_PLACEMENT;
+    this.setDeskPlacement(evId, { rotation: cur.rotation + delta });
+  }
+
+  flipEvidence(evId: string) {
+    const cur = this.state.deskPlacements[evId] ?? DEFAULT_PLACEMENT;
+    this.setDeskPlacement(evId, { flipped: !cur.flipped });
+  }
+
+  pickUp(evId: string) {
+    if (this.state.pickedUp.has(evId)) return;
+    this.state.pickedUp = new Set(this.state.pickedUp).add(evId);
+    this.emit();
+  }
+
+  /** Attempts to link two clues. Returns the connection if a match exists. */
+  tryConnect(a: string, b: string): { connection: EvidenceConnection | null; alreadyKnown: boolean } {
+    const key = pairKey(a, b);
+    const alreadyKnown = this.state.discoveredConnections.has(key);
+    const match = this.caseRef.connections.find(
+      (cn) => pairKey(cn.a, cn.b) === key,
+    );
+    if (match && !alreadyKnown) {
+      this.state.discoveredConnections = new Set(this.state.discoveredConnections).add(key);
+      const bonus = match.xp ?? 15;
+      this.state.xp += bonus;
+      this.state.intuition = Math.min(100, this.state.intuition + 8);
+      ui.spawnXp(bonus);
+      this.state.compareSet = [];
+      this.emit();
+    } else if (!match) {
+      // remember rejection briefly for UI feedback
+      this.state.failedPairs = [...this.state.failedPairs.slice(-5), key];
+      this.emit();
+    } else {
+      this.emit();
+    }
+    return { connection: match ?? null, alreadyKnown };
+  }
+
+  addEvidenceNote(evId: string, text: string) {
+    if (!text.trim()) return;
+    this.state.notebook = [
+      ...this.state.notebook,
+      {
+        id: `n-note-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+        evidenceId: evId,
+        note: text.trim(),
+        at: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" }),
+        pinned: true,
+        custom: true,
+      },
+    ];
+    this.emit();
+  }
+
+
+
   submitVerdict(killerId: string, weaponId: string, motiveId: string, primaryEvidenceId: string): Verdict {
     const sol = this.caseRef.solution;
     const correctKiller = killerId === sol.killerId;
@@ -400,6 +505,29 @@ export function useInvestigation(c: Case) {
     return { objective: o, current: Math.min(current, target), total: target, complete: current >= target };
   }), [c, state.investigatedHotspots, state.examinedEvidence, state.interviewedSuspects, state.forensicsRead, state.notebook, timeline.length]);
 
+  // Derived: which connections have been discovered (in case order).
+  const discoveredConnections = useMemo(() => {
+    return c.connections.filter((cn) => state.discoveredConnections.has(pairKey(cn.a, cn.b)));
+  }, [c.connections, state.discoveredConnections]);
+
+  // Derived: per-evidence state Found -> Examined -> Analyzed -> Linked -> Proven.
+  const evidenceStates = useMemo(() => {
+    const linkedIds = new Set<string>();
+    for (const cn of discoveredConnections) { linkedIds.add(cn.a); linkedIds.add(cn.b); }
+    const map: Record<string, EvidenceState> = {};
+    for (const e of c.evidence) {
+      if (!state.examinedEvidence.has(e.id)) { map[e.id] = "found"; continue; }
+      const analyzed = state.forensicsRead.has(e.id);
+      const linked = linkedIds.has(e.id);
+      const proven = linked && c.solution.keyEvidenceIds.includes(e.id);
+      if (proven) map[e.id] = "proven";
+      else if (linked) map[e.id] = "linked";
+      else if (analyzed) map[e.id] = "analyzed";
+      else map[e.id] = state.pickedUp.has(e.id) ? "examined" : "examined";
+    }
+    return map;
+  }, [c.evidence, c.solution.keyEvidenceIds, discoveredConnections, state.examinedEvidence, state.forensicsRead, state.pickedUp]);
+
   return {
     examined: state.examinedEvidence,
     investigated: state.investigatedHotspots,
@@ -416,6 +544,18 @@ export function useInvestigation(c: Case) {
     progress,
     timeline,
     objectives,
+    deskPlacements: state.deskPlacements,
+    pickedUp: state.pickedUp,
+    discoveredConnectionKeys: state.discoveredConnections,
+    discoveredConnections,
+    evidenceStates,
+    setDeskPlacement: useCallback((id: string, p: Partial<DeskPlacement>) => store.setDeskPlacement(id, p), [store]),
+    rotateEvidence: useCallback((id: string, d?: number) => store.rotateEvidence(id, d), [store]),
+    flipEvidence: useCallback((id: string) => store.flipEvidence(id), [store]),
+    pickUp: useCallback((id: string) => store.pickUp(id), [store]),
+    tryConnect: useCallback((a: string, b: string) => store.tryConnect(a, b), [store]),
+    addEvidenceNote: useCallback((id: string, n: string) => store.addEvidenceNote(id, n), [store]),
+
     examineEvidence: useCallback((e: Evidence, x?: number, y?: number) => store.examineEvidence(e, x, y), [store]),
     investigateHotspot: useCallback((id: string, x?: number, y?: number) => store.investigateHotspot(id, x, y), [store]),
     interviewSuspect: useCallback((id: string) => store.interviewSuspect(id), [store]),
