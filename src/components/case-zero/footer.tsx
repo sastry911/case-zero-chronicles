@@ -66,15 +66,10 @@ export function Footer() {
                   Leaderboard
                 </Link>
               </li>
-              <li>
-                <Link to="/profile" className="text-foreground/80 hover:text-foreground">
-                  Profile
-                </Link>
-              </li>
             </ul>
           </div>
           <div>
-            <h4 className="mb-3 text-xs uppercase tracking-widest text-muted-foreground">Studio</h4>
+            <h4 className="mb-3 text-xs uppercase tracking-widest text-muted-foreground">Company</h4>
             <ul className="space-y-2">
               <li>
                 <button
@@ -90,12 +85,10 @@ export function Footer() {
                   Contact
                 </Link>
               </li>
-              <li>
-                <ComingSoonTextLink label="Press kit" />
-              </li>
             </ul>
           </div>
         </div>
+
 
         <div className="flex flex-col items-start gap-4 lg:items-end">
           <TooltipProvider delayDuration={150}>
@@ -145,29 +138,6 @@ export function Footer() {
   );
 }
 
-function ComingSoonTextLink({ label }: { label: string }) {
-  return (
-    <TooltipProvider delayDuration={150}>
-      <Tooltip>
-        <TooltipTrigger asChild>
-          <button
-            type="button"
-            aria-disabled="true"
-            className="inline-flex cursor-not-allowed items-center gap-1.5 text-muted-foreground/70"
-          >
-            {label}
-            <span className="rounded-full border border-accent/30 bg-accent/10 px-1.5 py-0.5 font-mono text-[9px] uppercase tracking-widest text-accent">
-              Soon
-            </span>
-          </button>
-        </TooltipTrigger>
-        <TooltipContent side="top" className="text-xs">
-          Coming soon
-        </TooltipContent>
-      </Tooltip>
-    </TooltipProvider>
-  );
-}
 
 function AboutDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (v: boolean) => void }) {
   return (
