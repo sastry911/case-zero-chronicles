@@ -185,6 +185,7 @@ export const case001: Case = {
       suspicionImpact: { "sus-01": 4 },
       notebookNote: "Victim believed her life was at risk before boarding. Folder entrusted to Sister Aune.",
       timelineUnlock: { id: "tu-03", time: "23:44", label: "Premonition message", detail: "Carter warns an unknown contact she may not survive the ride." },
+      forensicReport: "Digital forensics: the burner SIM pings a tower two stations south. Recovered metadata proves message reached Aune's device before departure. No reply was ever sent.",
     },
     {
       id: "ev-04",
