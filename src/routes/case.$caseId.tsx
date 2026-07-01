@@ -31,6 +31,8 @@ import {
 import { PageLayout } from "@/components/case-zero/page-layout";
 import { Button } from "@/components/case-zero/button";
 import { Badge, DifficultyStars } from "@/components/case-zero/badge";
+import { EvidenceTable } from "@/components/case-zero/evidence-table";
+
 import { AnimatedNumber } from "@/components/case-zero/animated-number";
 import {
   Dialog,
