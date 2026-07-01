@@ -5,6 +5,7 @@ import { ArrowRight, Shield } from "lucide-react";
 import { PageLayout } from "@/components/case-zero/page-layout";
 import { DetectiveOffice } from "@/components/case-zero/detective-office";
 import { currentSeason } from "@/data/season";
+import { useLiveSeason } from "@/lib/story-engine";
 import { todaysCase } from "@/lib/mock-data";
 import { cn } from "@/lib/utils";
 
@@ -21,7 +22,7 @@ export const Route = createFileRoute("/dashboard")({
 const EASE = [0.22, 1, 0.36, 1] as const;
 
 function Dashboard() {
-  const s = currentSeason;
+  const s = useLiveSeason();
   const navigate = useNavigate();
   const reduce = useReducedMotion();
   const [entered, setEntered] = useState(false);

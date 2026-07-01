@@ -3,6 +3,7 @@ import { ArrowLeft, EyeOff, Fingerprint, Network, Skull } from "lucide-react";
 import { PageLayout } from "@/components/case-zero/page-layout";
 import { Badge } from "@/components/case-zero/badge";
 import { currentSeason } from "@/data/season";
+import { useLiveSeason } from "@/lib/story-engine";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/archive")({
@@ -18,7 +19,7 @@ export const Route = createFileRoute("/archive")({
 });
 
 function ArchivePage() {
-  const s = currentSeason;
+  const s = useLiveSeason();
   const solvedCases = s.cases.filter((c) => c.status === "solved");
   const upcomingClueSlots = Math.max(0, s.totalDays - s.sharedClues.length);
 

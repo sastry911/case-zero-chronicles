@@ -6,6 +6,7 @@ import { Badge } from "@/components/case-zero/badge";
 import { Button } from "@/components/case-zero/button";
 import { profile } from "@/lib/mock-data";
 import { currentSeason } from "@/data/season";
+import { useLiveSeason } from "@/lib/story-engine";
 import { cn } from "@/lib/utils";
 
 export const Route = createFileRoute("/profile")({
@@ -27,7 +28,7 @@ const milestones = [
 ];
 
 function ProfilePage() {
-  const s = currentSeason;
+  const s = useLiveSeason();
   const solved = s.cases.filter((c) => c.status === "solved").length;
   const progressPct = Math.round((s.currentDay / s.totalDays) * 100);
 
