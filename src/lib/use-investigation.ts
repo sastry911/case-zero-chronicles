@@ -18,12 +18,15 @@ export interface Verdict {
   killerId: string;
   weaponId: string;
   motiveId: string;
+  primaryEvidenceId: string;
   correctKiller: boolean;
   correctWeapon: boolean;
   correctMotive: boolean;
+  correctPrimary: boolean;
   killerName: string;
   weaponLabel: string;
   motiveLabel: string;
+  primaryEvidenceLabel: string;
   evidenceScore: number;
   totalScore: number;
   maxScore: number;
@@ -269,11 +272,12 @@ class Store {
     this.emit();
   }
 
-  submitVerdict(killerId: string, weaponId: string, motiveId: string): Verdict {
+  submitVerdict(killerId: string, weaponId: string, motiveId: string, primaryEvidenceId: string): Verdict {
     const sol = this.caseRef.solution;
     const correctKiller = killerId === sol.killerId;
     const correctWeapon = weaponId === sol.weaponId;
     const correctMotive = motiveId === sol.motiveId;
+    const correctPrimary = sol.keyEvidenceIds.includes(primaryEvidenceId);
 
     // Evidence score: proportion of key evidence examined + bonus for pinning them.
     const keyExamined = sol.keyEvidenceIds.filter(id => this.state.examinedEvidence.has(id)).length;
@@ -281,36 +285,39 @@ class Store {
     const evidenceRatio = sol.keyEvidenceIds.length === 0 ? 1 : (keyExamined + keyPinned * 0.5) / (sol.keyEvidenceIds.length * 1.5);
     const evidenceScore = Math.round(evidenceRatio * 40); // /40
 
-    // Points: killer 40, weapon 15, motive 15, evidence 40, minus red herrings pinned
+    // Points: killer 40, weapon 15, motive 15, primary 10, evidence 40, minus red herrings pinned
     const redHerringsPinned = this.caseRef.evidence.filter(e => e.redHerring && (this.state.importantEvidence.has(e.id))).length;
     let total =
       (correctKiller ? 40 : 0) +
       (correctWeapon ? 15 : 0) +
       (correctMotive ? 15 : 0) +
+      (correctPrimary ? 10 : 0) +
       evidenceScore -
       redHerringsPinned * 5;
-    total = Math.max(0, Math.min(110, total));
-    const maxScore = 110;
+    const maxScore = 120;
+    total = Math.max(0, Math.min(maxScore, total));
 
     let grade = "F";
     if (correctKiller) {
-      if (total >= 95) grade = "S";
-      else if (total >= 80) grade = "A";
-      else if (total >= 65) grade = "B";
-      else if (total >= 50) grade = "C";
+      if (total >= 105) grade = "S";
+      else if (total >= 90) grade = "A";
+      else if (total >= 70) grade = "B";
+      else if (total >= 55) grade = "C";
       else grade = "D";
     }
 
     const killer = this.caseRef.suspects.find(s => s.id === killerId);
     const weapon = this.caseRef.weaponOptions.find(w => w.id === weaponId);
     const motive = this.caseRef.motiveOptions.find(m => m.id === motiveId);
+    const primary = this.caseRef.evidence.find(e => e.id === primaryEvidenceId);
 
     const verdict: Verdict = {
-      killerId, weaponId, motiveId,
-      correctKiller, correctWeapon, correctMotive,
+      killerId, weaponId, motiveId, primaryEvidenceId,
+      correctKiller, correctWeapon, correctMotive, correctPrimary,
       killerName: killer?.name ?? "Unknown",
       weaponLabel: weapon?.label ?? "Unknown",
       motiveLabel: motive?.label ?? "Unknown",
+      primaryEvidenceLabel: primary?.label ?? "Unknown",
       evidenceScore,
       totalScore: total,
       maxScore,
@@ -422,7 +429,7 @@ export function useInvestigation(c: Case) {
     addCustomNote: useCallback((n: string) => store.addCustomNote(n), [store]),
     toggleCompare: useCallback((id: string) => store.toggleCompare(id), [store]),
     clearCompare: useCallback(() => store.clearCompare(), [store]),
-    submitVerdict: useCallback((k: string, w: string, m: string) => store.submitVerdict(k, w, m), [store]),
+    submitVerdict: useCallback((k: string, w: string, m: string, p: string) => store.submitVerdict(k, w, m, p), [store]),
     resetInvestigation: useCallback(() => store.resetInvestigation(), [store]),
   };
 }
