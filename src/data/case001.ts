@@ -26,6 +26,10 @@ export interface Evidence {
   suspicionImpact: Record<string, number>;
   notebookNote: string;
   timelineUnlock?: TimelineEvent;
+  /** Optional forensic lab report — only revealed once evidence is collected. */
+  forensicReport?: string;
+  /** If true, the clue looks meaningful but does not point to the true killer. */
+  redHerring?: boolean;
 }
 
 export interface Suspect {
@@ -36,19 +40,47 @@ export interface Suspect {
   relationship: string;
   alibi: string;
   statement: string;
-  /** 0-100 baseline; meter is baseline + sum of suspicion impacts from examined evidence. */
   baselineSuspicion: number;
   motive: string;
   timeline: TimelineEvent[];
+  /** Revealed once the suspect has been interviewed. */
+  secret?: string;
 }
 
 export interface CrimeSceneHotspot {
   id: string;
-  /** Percentage position over the crime scene image. */
   x: number;
   y: number;
   label: string;
   evidenceId: string;
+}
+
+export interface CaseChoice {
+  id: string;
+  label: string;
+  detail?: string;
+}
+
+export interface CaseObjective {
+  id: string;
+  label: string;
+  kind: "hotspots" | "evidence" | "suspects" | "timeline" | "forensics" | "notebook";
+  target?: number;
+}
+
+export interface ReconstructionBeat {
+  time: string;
+  label: string;
+  detail: string;
+}
+
+export interface CaseSolution {
+  killerId: string;
+  weaponId: string;
+  motiveId: string;
+  keyEvidenceIds: string[];
+  reconstruction: ReconstructionBeat[];
+  epilogue: string;
 }
 
 export interface Case {
@@ -72,6 +104,10 @@ export interface Case {
   suspects: Suspect[];
   hotspots: CrimeSceneHotspot[];
   baseTimeline: TimelineEvent[];
+  weaponOptions: CaseChoice[];
+  motiveOptions: CaseChoice[];
+  objectives: CaseObjective[];
+  solution: CaseSolution;
 }
 
 export const case001: Case = {
