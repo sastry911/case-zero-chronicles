@@ -306,6 +306,10 @@ function InvestigationDesk() {
               <BriefRow label="Date" value={c.date} />
             </div>
             <p className="leading-relaxed text-muted-foreground">{c.briefing}</p>
+            <div className="rounded-lg border border-border/60 bg-background/40 p-4">
+              <p className="mb-3 font-mono text-[10px] uppercase tracking-widest text-accent">Objectives</p>
+              <ObjectivesList objectives={inv.objectives} compact />
+            </div>
           </div>
         </DialogContent>
       </Dialog>
