@@ -505,6 +505,29 @@ export function useInvestigation(c: Case) {
     return { objective: o, current: Math.min(current, target), total: target, complete: current >= target };
   }), [c, state.investigatedHotspots, state.examinedEvidence, state.interviewedSuspects, state.forensicsRead, state.notebook, timeline.length]);
 
+  // Derived: which connections have been discovered (in case order).
+  const discoveredConnections = useMemo(() => {
+    return c.connections.filter((cn) => state.discoveredConnections.has(pairKey(cn.a, cn.b)));
+  }, [c.connections, state.discoveredConnections]);
+
+  // Derived: per-evidence state Found -> Examined -> Analyzed -> Linked -> Proven.
+  const evidenceStates = useMemo(() => {
+    const linkedIds = new Set<string>();
+    for (const cn of discoveredConnections) { linkedIds.add(cn.a); linkedIds.add(cn.b); }
+    const map: Record<string, EvidenceState> = {};
+    for (const e of c.evidence) {
+      if (!state.examinedEvidence.has(e.id)) { map[e.id] = "found"; continue; }
+      const analyzed = state.forensicsRead.has(e.id);
+      const linked = linkedIds.has(e.id);
+      const proven = linked && c.solution.keyEvidenceIds.includes(e.id);
+      if (proven) map[e.id] = "proven";
+      else if (linked) map[e.id] = "linked";
+      else if (analyzed) map[e.id] = "analyzed";
+      else map[e.id] = state.pickedUp.has(e.id) ? "examined" : "examined";
+    }
+    return map;
+  }, [c.evidence, c.solution.keyEvidenceIds, discoveredConnections, state.examinedEvidence, state.forensicsRead, state.pickedUp]);
+
   return {
     examined: state.examinedEvidence,
     investigated: state.investigatedHotspots,
@@ -521,6 +544,18 @@ export function useInvestigation(c: Case) {
     progress,
     timeline,
     objectives,
+    deskPlacements: state.deskPlacements,
+    pickedUp: state.pickedUp,
+    discoveredConnectionKeys: state.discoveredConnections,
+    discoveredConnections,
+    evidenceStates,
+    setDeskPlacement: useCallback((id: string, p: Partial<DeskPlacement>) => store.setDeskPlacement(id, p), [store]),
+    rotateEvidence: useCallback((id: string, d?: number) => store.rotateEvidence(id, d), [store]),
+    flipEvidence: useCallback((id: string) => store.flipEvidence(id), [store]),
+    pickUp: useCallback((id: string) => store.pickUp(id), [store]),
+    tryConnect: useCallback((a: string, b: string) => store.tryConnect(a, b), [store]),
+    addEvidenceNote: useCallback((id: string, n: string) => store.addEvidenceNote(id, n), [store]),
+
     examineEvidence: useCallback((e: Evidence, x?: number, y?: number) => store.examineEvidence(e, x, y), [store]),
     investigateHotspot: useCallback((id: string, x?: number, y?: number) => store.investigateHotspot(id, x, y), [store]),
     interviewSuspect: useCallback((id: string) => store.interviewSuspect(id), [store]),
