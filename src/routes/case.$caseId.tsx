@@ -1392,6 +1392,24 @@ function ReconstructionView({
   const missed = c.solution.keyEvidenceIds.filter((id) => !examined.has(id));
   const missedPins = c.solution.keyEvidenceIds.filter((id) => examined.has(id) && !important.has(id));
 
+  // ================= Story Engine wiring =================
+  // On first render of the verdict, archive the case into FILE 001 and
+  // reveal this case's recurring clue. Idempotent — safe on remount.
+  const { archiveCase, currentDay, file } = useStory();
+  useEffect(() => {
+    archiveCase({
+      caseId: c.id,
+      solved,
+      verdictName: verdict.killerName,
+      timeTakenMinutes: Math.max(1, Math.round((Date.now() - verdict.submittedAt) / 60000) + 15),
+    });
+  }, [archiveCase, c.id, solved, verdict.killerName, verdict.submittedAt]);
+
+  const cast = getReturningCastForCase(c.id);
+  const plannedClue =
+    getRecurringClue(file.cases.find((p) => p.id === c.id)?.recurringClueId ?? "clue-thread") ??
+    getRecurringClue("clue-thread")!;
+
   return (
     <div className="mx-auto max-w-3xl">
       {/* Verdict banner */}
