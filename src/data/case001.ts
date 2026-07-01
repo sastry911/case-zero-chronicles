@@ -257,6 +257,7 @@ export const case001: Case = {
         { id: "t3", time: "23:51", label: "Whereabouts unverified", detail: "No witness; conductor describes a woman in a green scarf in Car 7." },
         { id: "t4", time: "00:12", label: "Found in Car 4", detail: "Reading a contract when transit police arrived." },
       ],
+      secret: "Under interrogation, Voss admits she left Car 4 briefly at 23:53 — to make a call about the very sign-offs Carter was preparing to publish.",
     },
     {
       id: "sus-02",
