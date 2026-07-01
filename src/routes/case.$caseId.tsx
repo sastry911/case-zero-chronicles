@@ -215,10 +215,11 @@ function InvestigationDesk() {
           evidence: inv.examined.size,
           suspects: c.suspects.length,
           timeline: inv.timeline.length,
-          notebook: inv.notebook.length,
+          table: inv.discoveredConnections.length,
           forensics: examinedEvidence.length,
         }}
       />
+
 
       {/* Focus-mode sheets */}
       <FocusSheet open={openTab === "evidence"} title="Evidence Locker" subtitle={`${inv.examined.size} of ${c.evidence.length} collected`} onClose={() => setOpenTab(null)}>
