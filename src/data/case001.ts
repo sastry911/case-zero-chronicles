@@ -120,6 +120,7 @@ export interface Case {
   motiveOptions: CaseChoice[];
   objectives: CaseObjective[];
   solution: CaseSolution;
+  connections: EvidenceConnection[];
 }
 
 export const case001: Case = {
